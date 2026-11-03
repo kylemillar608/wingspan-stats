@@ -1,0 +1,11 @@
+{
+  "name": "wingspan-stats",
+  "private": true,
+  "type": "module",
+  "description": "Static Wingspan statistics site powered by a published Google Sheet.",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "serve": "python3 -m http.server 8000",
+    "verify-live": "node scripts/verify-live.mjs"
+  }
+}
