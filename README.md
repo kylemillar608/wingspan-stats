@@ -62,13 +62,17 @@ It prints every game, the leaderboard and every award.
 
 ## Running locally
 
-You need any static file server, because browsers won't load JavaScript modules from `file://`.
+Browsers won't load JavaScript modules from `file://`, so preview through a local server:
 
 ```bash
 cd wingspan
-python3 -m http.server 8000
+python3 scripts/serve.py
 # open http://localhost:8000
 ```
+
+`scripts/serve.py` is a tiny wrapper around Python's built-in server that tells the browser not to
+cache anything. With plain `python3 -m http.server`, browsers can keep running old copies of the
+JavaScript after you edit it.
 
 **Demo mode** is for previewing the design without real data. Open
 `http://localhost:8000/?demo`. It uses clearly fake players ("Robin (demo)" etc.) under a striped
