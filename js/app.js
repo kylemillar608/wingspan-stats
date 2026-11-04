@@ -4,6 +4,7 @@ import { fetchCsvText, LoadError } from './loader.js';
 import { interpretCsv, DataError } from './data.js';
 import { computeStats } from './stats.js';
 import { computeAwards } from './awards.js';
+import { computeRecap } from './recap.js';
 import { demoCsv } from './demo.js';
 import { destroyCharts, renderCumulativeWins, renderRollingAverage, renderPlayerScores } from './charts.js';
 import { fmtAvg, fmtInt, fmtNum, fmtPct, fmtSigned, gameList, listNames, ordinal, plural } from './fmt.js';
@@ -18,6 +19,7 @@ const state = {
   data: null,
   stats: null,
   awards: null,
+  recap: null,
   loadedAt: null,
   error: null,
   refreshError: null,
@@ -57,6 +59,7 @@ async function load({ background = false } = {}) {
     state.data = data;
     state.stats = computeStats(data);
     state.awards = computeAwards(state.stats);
+    state.recap = computeRecap(data, state.stats, state.awards);
     state.loadedAt = new Date();
     state.status = 'ready';
     state.error = null;
@@ -188,8 +191,8 @@ function renderOverview(el) {
   const byId = Object.fromEntries(awards.map((a) => [a.id, a]));
   const leaders = byId.emperor.holders.map((h) => h.player);
   const high = byId['high-flyer'];
-  const last = games[games.length - 1];
-  const lastLine = last.results.map((r) => r.score).join(' – ');
+  const topStreak = Math.max(...players.map((p) => stats.perPlayer[p].currentWinStreak));
+  const streakers = players.filter((p) => stats.perPlayer[p].currentWinStreak === topStreak);
 
   el.innerHTML = `
     <div class="tiles">
@@ -209,11 +212,13 @@ function renderOverview(el) {
         <div class="tile-sub">${high.holders.map((h) => `${esc(h.player)} · ${esc(h.detail)}`).join('<br>')}</div>
       </div>
       <div class="tile">
-        <div class="tile-label">Latest game</div>
-        <div class="tile-value names">${pnames(last.winners)}</div>
-        <div class="tile-sub">${last.isTie ? 'Shared win' : 'Won'} Game ${last.number} · ${esc(lastLine)}</div>
+        <div class="tile-label">Current streak</div>
+        <div class="tile-value names">${pnames(streakers)}</div>
+        <div class="tile-sub">${plural(topStreak, 'win')} in a row${streakers.length > 1 ? ' each' : ''}</div>
       </div>
     </div>
+
+    ${recapCard()}
 
     <section class="section">
       <div class="section-head">
@@ -239,6 +244,7 @@ function renderOverview(el) {
           [['Start', ...players.map(() => 0)], ...games.map((g, i) => [g.number, ...players.map((p) => stats.series.cumulativeWins[p][i + 1])])],
         )}
       </div>
+      ${headToHeadCard(stats)}
       <div class="card chart-card">
         <h2 class="card-title">Rolling average score</h2>
         <p class="card-sub">Average of each player’s last ${RULES.rollingWindow} games.</p>
@@ -254,6 +260,109 @@ function renderOverview(el) {
 
   renderCumulativeWins($('#chart-wins'), stats);
   renderRollingAverage($('#chart-rolling'), stats);
+}
+
+const RECAP_SHOWN = 5;
+
+function recapCard() {
+  const r = state.recap;
+  if (!r) return '';
+  const g = r.game;
+  const item = (e) => `<li><span class="recap-icon" aria-hidden="true">${e.icon}</span><span>${esc(e.text)}</span></li>`;
+  const shown = r.events.slice(0, RECAP_SHOWN);
+  const rest = r.events.slice(RECAP_SHOWN);
+  return `
+    <section class="section">
+      <div class="card recap">
+        <div class="recap-head">
+          <div>
+            <div class="tile-label">Latest game · Game ${g.number}${g.date ? ` · ${esc(g.date)}` : ''}</div>
+            <h2 class="recap-title">${esc(r.headline)}</h2>
+          </div>
+          <div class="recap-scores">${g.results
+            .map((x) => `<div class="row">${placeBadge(x.place, x.place === 1 && g.isTie)}${pname(x.player)}<span class="sc">${x.score}</span></div>`)
+            .join('')}</div>
+        </div>
+        ${
+          r.events.length
+            ? `<ul class="recap-events">${shown.map(item).join('')}</ul>
+               ${rest.length ? `<details class="recap-more"><summary>${plural(rest.length, 'more change')}</summary><ul class="recap-events">${rest.map(item).join('')}</ul></details>` : ''}`
+            : '<p class="card-sub">No records changed hands this time.</p>'
+        }
+      </div>
+    </section>`;
+}
+
+function rivalryBar(a, b, r) {
+  const seg = (n, style, cls = '') => (n ? `<span class="${cls}" style="flex:${n};${style}"></span>` : '');
+  return `<div class="rv-bar" role="img" aria-label="${esc(a)} ${r.wins}, ${esc(b)} ${r.losses}, ${plural(r.ties, 'tie')}">
+    ${seg(r.wins, `background:var(--p${pIndex(a) + 1})`)}${seg(r.ties, '', 'tie')}${seg(r.losses, `background:var(--p${pIndex(b) + 1})`)}
+  </div>`;
+}
+
+function headToHeadCard(stats) {
+  const { players, headToHead: h } = stats;
+  const pairs = [];
+  players.forEach((a, i) =>
+    players.slice(i + 1).forEach((b) => {
+      // Put the player leading the rivalry on the left.
+      const [x, y] = h[a][b].wins >= h[a][b].losses ? [a, b] : [b, a];
+      pairs.push({ a: x, b: y, r: h[x][y] });
+    }),
+  );
+  pairs.sort((p, q) => q.r.wins - q.r.losses - (p.r.wins - p.r.losses));
+  const lastText = ({ a, b, r }) => (r.last === 'T' ? 'tied' : r.last === 'W' ? esc(a) : esc(b));
+  return `
+    <div class="card">
+      <h2 class="card-title">Head-to-head</h2>
+      <p class="card-sub">Who scored higher when they played each other, whoever won the game overall.</p>
+      <div class="rivalries">${pairs
+        .map(
+          (p) => `
+        <div class="rivalry">
+          <div class="rv-names">
+            <span>${pname(p.a)} <strong class="rv-count">${p.r.wins}</strong></span>
+            ${p.r.ties ? `<span class="rv-ties">${plural(p.r.ties, 'tie')}</span>` : ''}
+            <span><strong class="rv-count">${p.r.losses}</strong> ${pname(p.b)}</span>
+          </div>
+          ${rivalryBar(p.a, p.b, p.r)}
+          <div class="rv-meta">${
+            p.r.wins === p.r.losses ? 'Dead even' : `${esc(p.a)} leads`} · Average margin ${esc(p.a)} ${fmtSigned(p.r.avgMargin)
+          } · Last game: ${lastText(p)}</div>
+        </div>`,
+        )
+        .join('')}</div>
+    </div>`;
+}
+
+function rivalsCard(stats, player) {
+  const h = stats.headToHead[player];
+  const opps = stats.players.filter((p) => p !== player);
+  const most = Math.max(...opps.map((o) => h[o].losses));
+  const nemeses = opps.filter((o) => h[o].losses === most && h[o].losses > h[o].wins);
+  return `
+    <div class="card">
+      <h3 class="card-title">Head-to-head</h3>
+      <p class="card-sub">${
+        nemeses.length
+          ? `🎭 Nemesis: ${nemeses.map((n) => `${esc(n)} (beats ${esc(player)} ${h[n].losses}–${h[n].wins})`).join(', ')}`
+          : `${esc(player)} doesn’t trail anyone head-to-head.`
+      }</p>
+      <div class="rivalries">${opps
+        .map((o) => {
+          const r = h[o];
+          return `
+        <div class="rivalry">
+          <div class="rv-names">
+            <span>vs ${pname(o)}</span>
+            <span><strong class="rv-count">${r.wins}–${r.losses}</strong>${r.ties ? ` <span class="rv-ties">${plural(r.ties, 'tie')}</span>` : ''}</span>
+          </div>
+          ${rivalryBar(player, o, r)}
+          <div class="rv-meta">Average margin ${fmtSigned(r.avgMargin)} · Last game: ${r.last === 'W' ? 'won' : r.last === 'L' ? 'lost' : 'tied'}</div>
+        </div>`;
+        })
+        .join('')}</div>
+    </div>`;
 }
 
 function leaderboardCards(stats) {
@@ -443,6 +552,7 @@ function renderPlayers(el) {
           </div>
           <div class="chart-box"><canvas id="chart-player" role="img" aria-label="${esc(player)}'s score in every game"></canvas></div>
         </div>
+        ${rivalsCard(stats, player)}
         <div class="card">
           <h3 class="card-title">Recent games</h3>
           <p class="card-sub">Last ${plural(recent.length, 'game')}, newest first</p>

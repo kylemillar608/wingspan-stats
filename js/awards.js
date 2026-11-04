@@ -212,6 +212,29 @@ export function computeAwards(stats) {
   );
 
   {
+    const def = {
+      id: 'nemesis', category: 'glory', icon: '🎭', name: 'The Nemesis',
+      definition: 'Most lopsided rivalry: head-to-head wins minus losses against one opponent (higher score in the same game, whoever won overall).',
+      empty: 'No rivalry has a leader yet.',
+    };
+    const h2h = stats.headToHead;
+    const pairs = players.flatMap((a) =>
+      players.filter((b) => b !== a).map((b) => ({ player: a, opp: b, r: h2h[a][b], value: h2h[a][b].wins - h2h[a][b].losses })),
+    );
+    const r = best(pairs, 'max');
+    const record = (x) => `${x.r.wins}–${x.r.losses}${x.r.ties ? `, ${plural(x.r.ties, 'tie')}` : ''}`;
+    out.push(
+      r.value == null || r.value < 1
+        ? award(def, {})
+        : award(def, {
+            value: r.value,
+            valueText: new Set(r.items.map(record)).size === 1 ? record(r.items[0]) : `+${r.value} net`,
+            holders: groupByPlayer(r.items, (its) => its.map((i) => `${record(i)} over ${i.opp}`).join(', ')),
+          }),
+    );
+  }
+
+  {
     const def = { id: 'underdog', category: 'glory', icon: '🐣', name: 'The Underdog', definition: 'Lowest winning score ever (shared wins count).' };
     const r = best(entries.filter((e) => e.place === 1).map((e) => ({ ...e, value: e.score })), 'min');
     out.push(

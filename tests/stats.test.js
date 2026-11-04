@@ -175,3 +175,38 @@ test('editing a historical score changes the records', () => {
   assert.equal(after.holders[0].player, 'Alex');
   assert.equal(after.value, 125);
 });
+
+test('head-to-head counts the higher score in each game, whoever won overall', () => {
+  const h = computeStats(interpretCsv(REAL)).headToHead;
+  assert.deepEqual([h.Jen.Alex.wins, h.Jen.Alex.losses, h.Jen.Alex.ties], [4, 1, 0]);
+  assert.equal(h.Jen.Alex.avgMargin, 10);
+  assert.deepEqual([h.Alex.Jen.wins, h.Alex.Jen.losses], [1, 4]);
+  assert.equal(h.Alex.Jen.avgMargin, -10);
+  assert.deepEqual([h.Jen.Connor.wins, h.Jen.Connor.losses], [3, 2]);
+  assert.equal(h.Jen.Connor.avgMargin, 6);
+  assert.deepEqual([h.Connor.Alex.wins, h.Connor.Alex.losses], [3, 2]);
+  assert.equal(h.Connor.Alex.avgMargin, 4);
+  assert.equal(h.Jen.Alex.last, 'W');
+  assert.equal(h.Connor.Jen.last, 'L');
+});
+
+test('head-to-head ties: equal scores are neither a win nor a loss', () => {
+  const h = computeStats(interpretCsv('A,B,C\n100,100,90\n110,100,100\n')).headToHead;
+  assert.deepEqual([h.A.B.wins, h.A.B.losses, h.A.B.ties], [1, 0, 1]);
+  assert.deepEqual([h.B.C.wins, h.B.C.losses, h.B.C.ties], [1, 0, 1]);
+});
+
+test('Nemesis: most lopsided rivalry, ties shared', () => {
+  const nem = (csv) => computeAwards(computeStats(interpretCsv(csv))).find((a) => a.id === 'nemesis');
+  const real = nem(REAL);
+  assert.deepEqual(real.holders.map((h) => h.player), ['Jen']);
+  assert.equal(real.value, 3);
+  assert.equal(real.valueText, '4–1');
+  assert.equal(real.holders[0].detail, '4–1 over Alex');
+  // First four games only: Jen over Alex 3–1 and Connor over Alex 3–1 share it.
+  const four = nem(REAL.split('\r\n').slice(0, 5).join('\r\n'));
+  assert.deepEqual(four.holders.map((h) => h.player), ['Jen', 'Connor']);
+  assert.equal(four.valueText, '3–1');
+  // Perfectly even rivalries: no holder.
+  assert.equal(nem('A,B,C\n1,2,3\n3,2,1\n').holders.length, 0);
+});

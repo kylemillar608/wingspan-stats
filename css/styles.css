@@ -636,6 +636,132 @@ main {
   margin-top: 2px;
 }
 
+/* ─────────────────────────── Latest-game recap ─────────────────────────── */
+.recap {
+  border-left: 4px solid var(--wheat);
+}
+.recap-head {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+@media (min-width: 720px) {
+  .recap-head {
+    grid-template-columns: 1fr minmax(220px, 280px);
+    align-items: start;
+  }
+}
+.recap-title {
+  font-size: 1.3rem;
+  margin-top: 4px;
+}
+.recap-scores {
+  display: grid;
+  gap: 4px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.recap-scores .row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+.recap-scores .sc {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.recap-events {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.recap-events li {
+  display: grid;
+  grid-template-columns: 1.6em 1fr;
+  gap: 6px;
+  align-items: baseline;
+  font-size: 0.92rem;
+}
+.recap-icon {
+  text-align: center;
+}
+.recap-more {
+  margin-top: 8px;
+}
+.recap-more summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.84rem;
+  margin-bottom: 6px;
+}
+
+/* ─────────────────────────── Head-to-head ─────────────────────────── */
+.rivalries {
+  display: grid;
+  gap: 16px;
+}
+@media (min-width: 900px) {
+  #view-overview .rivalries {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+  }
+}
+.rivalry {
+  min-width: 0;
+}
+.rv-names {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.rv-count {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+}
+.rv-ties {
+  font-size: 0.76rem;
+  color: var(--ink-3);
+}
+.rv-bar {
+  display: flex;
+  gap: 2px;
+  height: 10px;
+}
+.rv-bar span {
+  border-radius: 2px;
+  min-width: 4px;
+}
+.rv-bar span:first-child {
+  border-radius: 5px 2px 2px 5px;
+}
+.rv-bar span:last-child {
+  border-radius: 2px 5px 5px 2px;
+}
+.rv-bar span:only-child {
+  border-radius: 5px;
+}
+.rv-bar .tie {
+  background: var(--line-strong);
+}
+.rv-meta {
+  margin-top: 6px;
+  font-size: 0.8rem;
+  color: var(--ink-3);
+}
+.chart-card + .card,
+.card + .chart-card {
+  margin-bottom: 16px;
+}
+
 /* ─────────────────────────── Players / chips ─────────────────────────── */
 .swatch {
   display: inline-block;
@@ -1371,4 +1497,47 @@ details.data-table td {
 }
 .site-footer p {
   margin: 0 0 4px;
+}
+details.howto {
+  margin-top: 12px;
+}
+details.howto summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 600;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+}
+.howto-body {
+  display: grid;
+  gap: 12px;
+  margin-top: 8px;
+  max-width: 760px;
+}
+@media (min-width: 640px) {
+  .howto-body {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.howto-body section {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+.howto-body h3 {
+  font-size: 1rem;
+  margin-bottom: 6px;
+}
+.howto-body ol {
+  margin: 0;
+  padding-left: 20px;
+}
+.howto-body li + li {
+  margin-top: 4px;
+}
+.howto-body .muted {
+  margin-top: 8px;
+  font-size: 0.78rem;
 }

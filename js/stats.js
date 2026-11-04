@@ -163,5 +163,35 @@ export function computeStats({ players, games }) {
     });
   }
 
-  return { players, games: ranked, perPlayer, leaderboard, series: { cumulativeWins, rolling } };
+  return {
+    players,
+    games: ranked,
+    perPlayer,
+    leaderboard,
+    headToHead: headToHead(players, ranked),
+    series: { cumulativeWins, rolling },
+  };
+}
+
+// Head-to-head: in every game, whoever of the two scored higher "beats" the
+// other, regardless of who won the game overall. Equal scores are ties.
+export function headToHead(players, games) {
+  const h2h = {};
+  for (const a of players) {
+    h2h[a] = {};
+    for (const b of players) {
+      if (a === b) continue;
+      const diffs = games.map((g) => g.scores[a] - g.scores[b]);
+      const last = diffs.length ? diffs[diffs.length - 1] : null;
+      h2h[a][b] = {
+        wins: diffs.filter((d) => d > 0).length,
+        losses: diffs.filter((d) => d < 0).length,
+        ties: diffs.filter((d) => d === 0).length,
+        games: diffs.length,
+        avgMargin: mean(diffs),
+        last: last == null ? null : last > 0 ? 'W' : last < 0 ? 'L' : 'T',
+      };
+    }
+  }
+  return h2h;
 }

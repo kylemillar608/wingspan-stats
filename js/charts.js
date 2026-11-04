@@ -84,7 +84,7 @@ function baseOptions(t, { endLabelTexts = [] } = {}) {
   return {
     responsive: true,
     maintainAspectRatio: false,
-    animation: { duration: 350 },
+    animation: matchMedia('(prefers-reduced-motion: reduce)').matches ? false : { duration: 350 },
     layout: { padding: { top: 6, right, left: 0, bottom: 0 } },
     interaction: { mode: 'index', intersect: false },
     events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'],

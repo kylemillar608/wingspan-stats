@@ -143,6 +143,14 @@ Every page reads from those modules, so each rule is defined once.
 * The leaderboard ranks by wins, then average placement, then average score, then total points.
   Podium % is left out because with three players everyone is on the podium every game.
 
+**Head-to-head** compares each pair of players game by game: whoever scored higher "beats" the
+other, regardless of who won the game overall, and equal scores are ties. The Nemesis award goes
+to the biggest head-to-head wins-minus-losses against a single opponent.
+
+**Latest-game recap** recomputes everything without the newest game and lists what changed: lead
+changes, streaks extended or ended, Hall of Fame records changing hands, and personal bests or lows
+(once a player has 3+ earlier games).
+
 **Hall of Fame**
 
 | 🏆 Records & Glory | | 💀 Shame & Misfortune | |
@@ -157,7 +165,28 @@ Every page reads from those modules, so each rule is defined once.
 | 👑 The Dynasty | longest win streak | | |
 | 🦅 The Apex Predator | most 20+ point wins | | |
 | 💯 The 120 Club | most 120+ games | | |
+| 🎭 The Nemesis | most lopsided head-to-head rivalry | | |
 | 🐣 The Underdog | lowest winning score | | |
+
+---
+
+## Link previews and home-screen icon
+
+`index.html` contains Open Graph tags so a shared link shows a title, description and
+`assets/og-image.png`. Preview services need absolute URLs, so the tags point at
+`https://kylemillar608.github.io/wingspan-stats/`. If you rename the repository, update the
+`og:url` and `og:image` lines. Apps such as iMessage cache previews, so a link that was already
+shared may keep its old preview for a while.
+
+`manifest.webmanifest` and `assets/apple-touch-icon.png` give the home-screen shortcut its name and
+bird icon. Instructions for adding it are in a collapsible section in the site's footer.
+
+The preview image and icons are rendered from HTML sources in `assets/src/`. After editing those
+(for example, to change the player names on the preview image), run:
+
+```bash
+bash scripts/render-images.sh
+```
 
 ---
 
@@ -170,13 +199,18 @@ js/config.js          the Google Sheets CSV link  ← the only file you'd normal
 js/rules.js           thresholds (blowout margin, 120 Club, window sizes…)
 js/csv.js             CSV parser (quotes, CRLF, BOM)
 js/data.js            validates rows → games, reports problems
-js/stats.js           every statistic, ranking and streak
+js/stats.js           every statistic, ranking, streak and head-to-head record
 js/awards.js          Hall of Fame
+js/recap.js           latest-game recap (what changed)
 js/charts.js          Chart.js rendering
 js/app.js             views, routing, loading/error states
 js/loader.js          fetches the sheet and explains failures
 js/demo.js            sample data for ?demo only
 vendor/chart.umd.min.js   Chart.js 4.4.1, bundled so no CDN is needed
 scripts/verify-live.mjs   prints live stats in the terminal
+scripts/serve.py      no-cache local preview server
+scripts/render-images.sh  re-renders the preview image and icons
+manifest.webmanifest  home-screen app name and icons
+assets/               favicon, preview image, icons (sources in assets/src/)
 tests/                node:test unit tests
 ```

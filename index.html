@@ -8,6 +8,23 @@
   <meta name="theme-color" content="#f4efe4" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#151916" media="(prefers-color-scheme: dark)" />
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+
+  <!-- Link previews (iMessage, WhatsApp, Slack, Discord…). Absolute URLs are required. -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Wingspan Stats" />
+  <meta property="og:title" content="Wingspan Stats" />
+  <meta property="og:description" content="Live leaderboard, rivalries, Hall of Fame and game history for our Wingspan games." />
+  <meta property="og:url" content="https://kylemillar608.github.io/wingspan-stats/" />
+  <meta property="og:image" content="https://kylemillar608.github.io/wingspan-stats/assets/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Wingspan Stats: leaderboard, rivalries, Hall of Fame" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <!-- Home-screen icon and name -->
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="apple-mobile-web-app-title" content="Wingspan" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -71,6 +88,29 @@
         New games appear on refresh; Google can take up to ~5 minutes to publish edits.
       </p>
       <p class="muted">Ties: everyone tied for first gets a win. Placements use 1st, 1st, 3rd style ranking.</p>
+      <details class="howto">
+        <summary>📱 Add this site to your phone’s home screen</summary>
+        <div class="howto-body">
+          <section>
+            <h3>iPhone</h3>
+            <ol>
+              <li>Open this page in <strong>Safari</strong>.</li>
+              <li>Tap the <strong>Share</strong> button (the square with an arrow). On newer iOS versions it’s inside the <strong>•••</strong> menu.</li>
+              <li>Scroll down and tap <strong>Add to Home Screen</strong>, then <strong>Add</strong>.</li>
+            </ol>
+            <p class="muted">In Chrome on iPhone, tap the Share icon in the address bar, then Add to Home Screen.</p>
+          </section>
+          <section>
+            <h3>Android</h3>
+            <ol>
+              <li>Open this page in <strong>Chrome</strong>.</li>
+              <li>Tap the <strong>⋮</strong> menu in the top-right corner.</li>
+              <li>Tap <strong>Add to Home screen</strong> (or <strong>Install app</strong>), then <strong>Add</strong>.</li>
+            </ol>
+            <p class="muted">The shortcut opens full-screen with the bird icon. Use the ↻ Refresh button to fetch new games.</p>
+          </section>
+        </div>
+      </details>
     </div>
   </footer>
 </body>
