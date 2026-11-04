@@ -6,6 +6,7 @@ import { computeStats } from './stats.js';
 import { computeAwards } from './awards.js';
 import { computeRecap } from './recap.js';
 import { demoCsv } from './demo.js';
+import { birthdaysOn, previewDate } from './birthdays.js';
 import { destroyCharts, renderCumulativeWins, renderRollingAverage, renderPlayerScores } from './charts.js';
 import { fmtAvg, fmtInt, fmtNum, fmtPct, fmtSigned, gameList, listNames, ordinal, plural } from './fmt.js';
 
@@ -93,6 +94,7 @@ function render() {
   });
   renderStatus();
   renderNotices();
+  renderBirthday();
 
   const stateEl = $('#state');
   destroyCharts();
@@ -137,6 +139,63 @@ function renderStatus() {
         : ''
     }`;
 }
+
+// ─────────────────────────── Birthday easter egg ───────────────────────────
+
+const BIRTHDAY_DISMISS_KEY = 'wingspan-stats:birthday-dismissed';
+const today = () => previewDate(location.search) || new Date();
+const dateKey = (d) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+let confettiShown = false;
+
+// Today's birthday people, spelled as in the sheet when they're in it.
+function birthdayPeople() {
+  const players = state.stats?.players || [];
+  return birthdaysOn(today()).map((n) => players.find((p) => p.toLowerCase() === n.toLowerCase()) || n);
+}
+
+function birthdayLine(names) {
+  const s = names.length === 1 ? state.stats?.perPlayer[names[0]] : null;
+  if (!s || !s.games) return 'Birthday rules: the birthday bird picks the expansion.';
+  const p = names[0];
+  if (s.currentWinStreak >= 2) return `${p} is on a ${s.currentWinStreak}-game winning streak. Letting it grow would be a lovely present.`;
+  if (state.stats.leaderboard[0].player === p) return `Birthday and top of the leaderboard. Some birds have all the luck.`;
+  return `Birthday rules: ${p} picks the expansion. Best score to beat today: ${s.high}.`;
+}
+
+function renderBirthday() {
+  const el = $('#birthday');
+  // Wait for the scores, so the one-time confetti isn't spent on the loading screen.
+  const names = state.status === 'ready' ? birthdayPeople() : [];
+  let dismissed = false;
+  try {
+    dismissed = localStorage.getItem(BIRTHDAY_DISMISS_KEY) === dateKey(today());
+  } catch {}
+  if (!names.length || dismissed) {
+    el.innerHTML = '';
+    return;
+  }
+  const colors = ['var(--p1)', 'var(--p2)', 'var(--p3)', 'var(--gold)', 'var(--wheat)'];
+  const confetti = confettiShown
+    ? ''
+    : `<div class="confetti" aria-hidden="true">${Array.from(
+        { length: 22 },
+        (_, i) =>
+          `<i style="left:${(i * 37) % 100}%;background:${colors[i % colors.length]};animation-delay:${(i % 7) * 0.12}s;--r:${(i * 53) % 360}deg"></i>`,
+      ).join('')}</div>`;
+  confettiShown = true;
+  el.innerHTML = `
+    <section class="birthday" role="status">
+      ${confetti}
+      <div class="bday-cake" aria-hidden="true">🎂</div>
+      <div class="bday-text">
+        <h2>Happy birthday, ${names.map((n) => (state.stats?.players.includes(n) ? pname(n) : esc(n))).join(' &amp; ')}!</h2>
+        <p>${esc(birthdayLine(names))}</p>
+      </div>
+      <button class="icon-btn bday-close" type="button" data-action="dismiss-birthday" aria-label="Dismiss birthday message" title="Dismiss for today">×</button>
+    </section>`;
+}
+
+const isBirthday = (p) => birthdayPeople().includes(p);
 
 function renderNotices() {
   const el = $('#notices');
@@ -462,7 +521,7 @@ function renderPlayers(el) {
   const pills = `<nav class="pills" aria-label="Choose player">${players
     .map(
       (p) =>
-        `<a class="pill" style="${pc(p)}" href="#players/${encodeURIComponent(p)}" ${p === player ? 'aria-current="true"' : ''}><span class="swatch"></span>${esc(p)}</a>`,
+        `<a class="pill" style="${pc(p)}" href="#players/${encodeURIComponent(p)}" ${p === player ? 'aria-current="true"' : ''}><span class="swatch"></span>${esc(p)}${isBirthday(p) ? ' 🎂' : ''}</a>`,
     )
     .join('')}</nav>`;
 
@@ -487,7 +546,7 @@ function renderPlayers(el) {
     <div class="profile-head" style="${pc(player)}">
       <span class="avatar lg">${esc(player.charAt(0).toUpperCase())}</span>
       <div>
-        <h2>${esc(player)}</h2>
+        <h2>${esc(player)}${isBirthday(player) ? ' <span title="Happy birthday!">🎂</span>' : ''}</h2>
         <p>${ordinal(rank)} on the leaderboard · ${plural(s.wins, 'win')} in ${plural(s.games, 'game')}</p>
       </div>
     </div>
@@ -692,6 +751,12 @@ document.addEventListener('click', (e) => {
   if (!btn) return;
   if (btn.dataset.action === 'retry') load();
   if (btn.dataset.action === 'refresh') load({ background: true });
+  if (btn.dataset.action === 'dismiss-birthday') {
+    try {
+      localStorage.setItem(BIRTHDAY_DISMISS_KEY, dateKey(today()));
+    } catch {}
+    $('#birthday').innerHTML = '';
+  }
   if (btn.dataset.sort) {
     state.historyNewestFirst = btn.dataset.sort === 'newest';
     render();

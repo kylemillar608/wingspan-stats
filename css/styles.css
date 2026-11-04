@@ -460,6 +460,74 @@ main {
   padding-left: 20px;
 }
 
+/* ─────────────────────────── Birthday easter egg ─────────────────────────── */
+.birthday {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 18px;
+  padding: 16px 14px 16px 18px;
+  border-radius: var(--radius);
+  border: 1px solid var(--glory-edge);
+  background: var(--glory-bg);
+  box-shadow: var(--shadow);
+}
+.bday-cake {
+  font-size: 2.4rem;
+  line-height: 1;
+}
+.bday-text h2 {
+  font-size: 1.3rem;
+  color: var(--glory-ink);
+}
+.bday-text h2 .pname {
+  font-weight: inherit;
+  white-space: normal;
+}
+.bday-text p {
+  margin: 4px 0 0;
+  color: var(--ink-2);
+  font-size: 0.9rem;
+}
+.bday-close {
+  font-size: 1.3rem;
+  line-height: 1;
+  color: var(--ink-2);
+  align-self: start;
+}
+.confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.confetti i {
+  position: absolute;
+  top: -12px;
+  width: 7px;
+  height: 11px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: confetti-fall 2.4s ease-in forwards;
+}
+@keyframes confetti-fall {
+  0% {
+    opacity: 1;
+    transform: translateY(0) rotate(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(140px) rotate(var(--r));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .confetti {
+    display: none;
+  }
+}
+
 /* ─────────────────────────── Loading & error ─────────────────────────── */
 .state-card {
   max-width: 620px;

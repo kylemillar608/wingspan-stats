@@ -202,6 +202,7 @@ js/data.js            validates rows → games, reports problems
 js/stats.js           every statistic, ranking, streak and head-to-head record
 js/awards.js          Hall of Fame
 js/recap.js           latest-game recap (what changed)
+js/birthdays.js       🎂 easter egg: birthday dates (preview with ?today=YYYY-MM-DD)
 js/charts.js          Chart.js rendering
 js/app.js             views, routing, loading/error states
 js/loader.js          fetches the sheet and explains failures
