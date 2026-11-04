@@ -25,6 +25,7 @@ const META_COLUMNS = [
 ];
 
 const SCORE_RE = /^\d+(\.\d+)?$/;
+const URL_RE = /^(https?:\/\/|www\.)\S+$/i;
 
 function columnLetter(index) {
   let s = '';
@@ -48,11 +49,12 @@ export function interpretRows(rows) {
     ]);
   }
   const header = rows[headerIndex].map((c) => String(c).trim());
+  const dataRows = rows.slice(headerIndex + 1);
 
-  const playerCols = [];
+  let playerCols = [];
   const meta = {};
   header.forEach((name, col) => {
-    if (!name) return;
+    if (!name || URL_RE.test(name)) return; // e.g. a link to this site in row 1
     const m = META_COLUMNS.find((mc) => mc.re.test(name));
     if (m) {
       if (m.kind !== 'ignored' && meta[m.kind] == null) meta[m.kind] = col;
@@ -60,6 +62,11 @@ export function interpretRows(rows) {
     }
     playerCols.push({ name, col });
   });
+
+  // A header cell with nothing beneath it is a label or note, not a player.
+  // (If no games have been entered at all yet, keep every named column.)
+  const hasValues = (col) => dataRows.some((r) => !isBlank(r[col]));
+  if (playerCols.some((p) => hasValues(p.col))) playerCols = playerCols.filter((p) => hasValues(p.col));
 
   if (playerCols.length && playerCols.every((p) => SCORE_RE.test(p.name))) {
     throw new DataError(`The first row contains numbers (${header.join(', ')}) instead of player names.`, [

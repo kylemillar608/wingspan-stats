@@ -66,6 +66,28 @@ test('unexpected player count is a warning, not a failure', () => {
   assert.match(d.warnings[0].message, /Expected 3 players/);
 });
 
+test('a link to the site in the header row is not a player (real sheet, 2026-11-03)', () => {
+  const csv =
+    'Jen,Alex,Connor,,,https://kylemillar608.github.io/wingspan-stats/\r\n83,100,105,,,\r\n90,90,110,,,\r\n102,94,99,,,';
+  const d = interpretCsv(csv);
+  assert.deepEqual(d.players, ['Jen', 'Alex', 'Connor']);
+  assert.equal(d.games.length, 3);
+  assert.deepEqual(d.warnings, []);
+});
+
+test('a text label in the header row with nothing beneath it is not a player', () => {
+  const d = interpretCsv('Jen,Alex,Connor,,Our stats site\n1,2,3,,\n4,5,6,,\n');
+  assert.deepEqual(d.players, ['Jen', 'Alex', 'Connor']);
+  assert.equal(d.games.length, 2);
+  assert.deepEqual(d.warnings, []);
+});
+
+test('with no games entered yet, every named column is still a player', () => {
+  const d = interpretCsv('Jen,Alex,Connor\n,,\n');
+  assert.deepEqual(d.players, ['Jen', 'Alex', 'Connor']);
+  assert.equal(d.games.length, 0);
+});
+
 test('values in an unnamed column are reported', () => {
   const d = interpretCsv('A,B,C,\n1,2,3,4\n');
   assert.equal(d.games.length, 1);
