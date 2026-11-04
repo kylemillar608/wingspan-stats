@@ -600,18 +600,30 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // Theme toggle: system by default; a click pins the opposite of what's showing.
+const isDarkNow = () => {
+  const t = document.documentElement.dataset.theme;
+  return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+};
+function labelThemeToggle() {
+  const label = isDarkNow() ? 'Switch to light mode' : 'Switch to dark mode';
+  const btn = $('.theme-toggle');
+  btn.setAttribute('aria-label', label);
+  btn.title = label;
+}
 $('.theme-toggle').addEventListener('click', () => {
   const root = document.documentElement;
-  const isDark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
-  root.dataset.theme = isDark ? 'light' : 'dark';
+  root.dataset.theme = isDarkNow() ? 'light' : 'dark';
   try {
     localStorage.setItem('wingspan-stats:theme', root.dataset.theme);
   } catch {}
+  labelThemeToggle();
   if (state.status === 'ready') render();
 });
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  labelThemeToggle();
   if (!document.documentElement.dataset.theme && state.status === 'ready') render();
 });
+labelThemeToggle();
 
 // Re-render charts when crossing the phone/desktop breakpoint (tick density).
 let wasNarrow = innerWidth < 640;

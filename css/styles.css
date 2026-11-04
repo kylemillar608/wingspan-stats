@@ -301,20 +301,21 @@ td,
   stroke-width: 1.8;
   stroke-linecap: round;
 }
-.i-moon {
-  display: none;
-}
-:root[data-theme='dark'] .i-sun {
+/* The icon shows the mode you'll switch TO: moon in light mode, sun in dark. */
+.i-sun {
   display: none;
 }
 :root[data-theme='dark'] .i-moon {
+  display: none;
+}
+:root[data-theme='dark'] .i-sun {
   display: block;
 }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) .i-sun {
+  :root:not([data-theme='light']) .i-moon {
     display: none;
   }
-  :root:not([data-theme='light']) .i-moon {
+  :root:not([data-theme='light']) .i-sun {
     display: block;
   }
 }
