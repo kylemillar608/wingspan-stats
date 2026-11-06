@@ -1,16 +1,18 @@
 // Fetches the live published CSV with the exact same code the website uses and
 // prints the computed statistics, so they can be checked against the sheet.
-//   node scripts/verify-live.mjs
+//   node scripts/verify-live.mjs              # the link in js/config.js
+//   node scripts/verify-live.mjs <csv-url>    # any other published CSV (e.g. a new tab)
 
 import { fetchCsvText } from '../js/loader.js';
 import { interpretCsv } from '../js/data.js';
 import { computeStats } from '../js/stats.js';
 import { computeAwards } from '../js/awards.js';
-import { fmtAvg, listNames } from '../js/fmt.js';
+import { fmtAvg, fmtDate, listNames } from '../js/fmt.js';
+import { CONFIG } from '../js/config.js';
 
 try {
-  const text = await fetchCsvText();
-  const data = interpretCsv(text);
+  const text = await fetchCsvText(process.argv[2] || CONFIG.csvUrl);
+  const data = interpretCsv(text, { dateOrder: CONFIG.dateOrder });
   const stats = computeStats(data);
 
   console.log(`Players: ${data.players.join(', ')}`);
@@ -20,7 +22,8 @@ try {
   console.log('\nGames (sheet row → scores → winner, margin)');
   for (const g of stats.games) {
     const s = data.players.map((p) => `${p} ${g.scores[p]}`).join(' · ');
-    console.log(`  #${g.number} (row ${g.sheetRow}): ${s} → ${listNames(g.winners)}${g.isTie ? ' (tie)' : ''}, +${g.margin}`);
+    const when = fmtDate(g) ? ` ${fmtDate(g)}` : '';
+    console.log(`  #${g.number} (row ${g.sheetRow})${when}: ${s} → ${listNames(g.winners)}${g.isTie ? ' (tie)' : ''}, +${g.margin}`);
   }
 
   console.log('\nLeaderboard');

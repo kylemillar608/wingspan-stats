@@ -33,8 +33,12 @@ https://docs.google.com/spreadsheets/d/e/2PACX-1vT09powUsPn2xPaa5yYOdtKl5tJ0wLIN
 * A row with any missing or non-numeric score is treated as unfinished. It is **not** counted,
   and the site shows a yellow notice naming the row. Missing scores are never treated as zero.
 * Optional extra columns are fine if their header is `Date`, `Notes`, `Game`/`#`, or a computed
-  column such as `Winner`/`Margin`/`Total`. They're never mistaken for players. A `Date` column is
-  shown in the game history, but row order still decides the game order.
+  column such as `Winner`/`Margin`/`Total`. They're never mistaken for players.
+* A **`Date` column** is read as real dates: `11/3/2026`, `2026-11-03`, `Nov 3, 2026`,
+  `Monday, November 3, 2026`, two-digit years, and so on. Day-first vs month-first is detected from
+  the column (any day above 12 settles it); otherwise `dateOrder` in `js/config.js` decides.
+  Blank dates are fine. An unreadable date shows a warning, but the game still counts. Row order
+  still decides the game order, and a date earlier than the row above it is flagged.
 
 ### If the data stops loading
 
@@ -198,6 +202,7 @@ css/styles.css        all styling (light + dark themes, mobile-first)
 js/config.js          the Google Sheets CSV link  ← the only file you'd normally edit
 js/rules.js           thresholds (blowout margin, 120 Club, window sizes…)
 js/csv.js             CSV parser (quotes, CRLF, BOM)
+js/dates.js           reads the Date column
 js/data.js            validates rows → games, reports problems
 js/stats.js           every statistic, ranking, streak and head-to-head record
 js/awards.js          Hall of Fame

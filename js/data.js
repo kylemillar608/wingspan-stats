@@ -6,9 +6,11 @@
 //
 // Optional extra columns are recognised by header name and never mistaken for
 // players: Date / Played, Game / #, Notes / Comments, and computed columns such
-// as Winner / Margin / Total. Games are taken in sheet order (top = oldest).
+// as Winner / Margin / Total. Games are taken in sheet order (top = oldest);
+// dates are read for display and date-based stats but never reorder games.
 
 import { parseCsv } from './csv.js';
+import { parseDate, dateOrderFor, resolveDate } from './dates.js';
 
 export class DataError extends Error {
   constructor(message, hints = []) {
@@ -40,7 +42,7 @@ function columnLetter(index) {
 
 const isBlank = (v) => v == null || String(v).trim() === '';
 
-export function interpretRows(rows) {
+export function interpretRows(rows, { dateOrder = 'MDY' } = {}) {
   const warnings = [];
   const headerIndex = rows.findIndex((r) => r.some((c) => !isBlank(c)));
   if (headerIndex === -1) {
@@ -150,11 +152,14 @@ export function interpretRows(rows) {
     games.push({
       number: games.length + 1,
       sheetRow,
-      date: cell(meta.date) || null,
+      date: null,
+      dateText: cell(meta.date) || null,
       notes: cell(meta.notes) || null,
       scores,
     });
   }
+
+  resolveGameDates(games, warnings, dateOrder);
 
   for (const col of strayColumns) {
     warnings.push({
@@ -166,6 +171,36 @@ export function interpretRows(rows) {
   return { players, games, warnings, blankRows };
 }
 
-export function interpretCsv(text) {
-  return interpretRows(parseCsv(text));
+// Fills in game.date (a local-midnight Date) from game.dateText. A blank or
+// unreadable date leaves the game counted with date = null.
+function resolveGameDates(games, warnings, fallbackOrder) {
+  const dated = games.filter((g) => g.dateText);
+  if (!dated.length) return;
+  const parsed = new Map(dated.map((g) => [g, parseDate(g.dateText)]));
+  const { order, conflict } = dateOrderFor([...parsed.values()], fallbackOrder);
+  if (conflict) {
+    warnings.push({
+      row: null,
+      message: `The Date column mixes day-first and month-first dates, so they're read as ${order === 'DMY' ? 'day/month/year' : 'month/day/year'}. Use one format for every row.`,
+    });
+  }
+  let previous = null;
+  for (const g of dated) {
+    g.date = resolveDate(parsed.get(g), order);
+    if (!g.date) {
+      warnings.push({ row: g.sheetRow, message: `Row ${g.sheetRow}: couldn't read the date "${g.dateText}". The game still counts.` });
+      continue;
+    }
+    if (previous && g.date < previous.date) {
+      warnings.push({
+        row: g.sheetRow,
+        message: `Row ${g.sheetRow}'s date (${g.dateText}) is earlier than row ${previous.sheetRow}'s (${previous.dateText}). Games are ordered by row, so check the order.`,
+      });
+    }
+    previous = g;
+  }
+}
+
+export function interpretCsv(text, options) {
+  return interpretRows(parseCsv(text), options);
 }

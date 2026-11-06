@@ -48,7 +48,8 @@ test('date/notes/winner columns are not mistaken for players', () => {
   const d = interpretCsv('Date,Jen,Alex,Connor,Winner,Notes\n2026-01-02,90,80,70,Jen,fun\n2026-01-09,,,,,next week\n');
   assert.deepEqual(d.players, ['Jen', 'Alex', 'Connor']);
   assert.equal(d.games.length, 1);
-  assert.equal(d.games[0].date, '2026-01-02');
+  assert.equal(d.games[0].dateText, '2026-01-02');
+  assert.equal(d.games[0].date.getTime(), new Date(2026, 0, 2).getTime());
   assert.equal(d.games[0].notes, 'fun');
   assert.equal(d.warnings.length, 1, 'row with a date but no scores is flagged as unfinished');
 });

@@ -9,6 +9,10 @@ export const CONFIG = {
   // Link shown in the footer so players can jump to the source sheet.
   sheetUrl: 'https://docs.google.com/spreadsheets/d/1pz7voYnfaIormEAxs-dY9fVCyrMU4At46eDB5UH03GM/edit',
 
+  // How to read numeric dates like 3/11/2026 when the Date column doesn't make
+  // it obvious (no day above 12 anywhere): 'MDY' = month first (US), 'DMY' = day first.
+  dateOrder: 'MDY',
+
   requestTimeoutMs: 15000,
 
   // When the tab regains focus after this long, quietly re-fetch the sheet.

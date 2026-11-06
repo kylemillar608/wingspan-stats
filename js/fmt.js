@@ -35,3 +35,10 @@ export const gameRange = (from, to) => (from === to ? `Game ${from}` : `Games ${
 
 export const gameList = (nums) =>
   nums.length === 1 ? `Game ${nums[0]}` : `Games ${listNames(nums.map(String))}`;
+
+// A game's date for display: "Mon, Nov 3, 2026" (in the viewer's locale), or
+// the sheet's original text if it couldn't be read.
+export const fmtDate = (g, { weekday = true } = {}) =>
+  g.date
+    ? g.date.toLocaleDateString(undefined, { weekday: weekday ? 'short' : undefined, month: 'short', day: 'numeric', year: 'numeric' })
+    : g.dateText || '';

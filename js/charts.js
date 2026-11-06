@@ -2,7 +2,7 @@
 // charts follow the light/dark theme and player colours stay consistent.
 
 import { RULES } from './rules.js';
-import { fmtAvg, listNames, ordinal, plural } from './fmt.js';
+import { fmtAvg, fmtDate, listNames, ordinal, plural } from './fmt.js';
 
 const active = new Map();
 
@@ -157,7 +157,7 @@ export function renderCumulativeWins(canvas, stats) {
       const i = items[0].dataIndex;
       if (i === 0) return 'Before game 1';
       const g = games[i - 1];
-      return `Game ${g.number}${g.date ? ` · ${g.date}` : ''}`;
+      return `Game ${g.number}${fmtDate(g) ? ` · ${fmtDate(g)}` : ''}`;
     },
     label: (item) => ` ${item.dataset.label}: ${plural(item.parsed.y, 'win')}`,
     footer: (items) => {
@@ -199,7 +199,7 @@ export function renderRollingAverage(canvas, stats) {
   options.plugins.tooltip.callbacks = {
     title: (items) => {
       const g = games[items[0].dataIndex];
-      return `Game ${g.number}${g.date ? ` · ${g.date}` : ''}`;
+      return `Game ${g.number}${fmtDate(g) ? ` · ${fmtDate(g)}` : ''}`;
     },
     label: (item) => {
       const r = series.rolling[item.dataset.label][item.dataIndex];
@@ -243,7 +243,7 @@ export function renderPlayerScores(canvas, stats, player) {
   options.plugins.tooltip.callbacks = {
     title: (items) => {
       const g = games[items[0].dataIndex];
-      return `Game ${g.number}${g.date ? ` · ${g.date}` : ''}`;
+      return `Game ${g.number}${fmtDate(g) ? ` · ${fmtDate(g)}` : ''}`;
     },
     label: (item) => {
       if (item.datasetIndex === 1) return ` Career average: ${fmtAvg(s.avg)}`;

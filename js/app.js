@@ -8,7 +8,7 @@ import { computeRecap } from './recap.js';
 import { demoCsv } from './demo.js';
 import { birthdaysOn, previewDate } from './birthdays.js';
 import { destroyCharts, renderCumulativeWins, renderRollingAverage, renderPlayerScores } from './charts.js';
-import { fmtAvg, fmtInt, fmtNum, fmtPct, fmtSigned, gameList, listNames, ordinal, plural } from './fmt.js';
+import { fmtAvg, fmtDate, fmtInt, fmtNum, fmtPct, fmtSigned, gameList, listNames, ordinal, plural } from './fmt.js';
 
 // ─────────────────────────── State ───────────────────────────
 
@@ -56,7 +56,7 @@ async function load({ background = false } = {}) {
   }
   try {
     const text = DEMO ? demoCsv() : await fetchCsvText();
-    const data = interpretCsv(text);
+    const data = interpretCsv(text, { dateOrder: CONFIG.dateOrder });
     state.data = data;
     state.stats = computeStats(data);
     state.awards = computeAwards(state.stats);
@@ -335,7 +335,7 @@ function recapCard() {
       <div class="card recap">
         <div class="recap-head">
           <div>
-            <div class="tile-label">Latest game · Game ${g.number}${g.date ? ` · ${esc(g.date)}` : ''}</div>
+            <div class="tile-label">Latest game · Game ${g.number}${fmtDate(g) ? ` · ${esc(fmtDate(g))}` : ''}</div>
             <h2 class="recap-title">${esc(r.headline)}</h2>
           </div>
           <div class="recap-scores">${g.results
@@ -683,7 +683,7 @@ function renderHistory(el) {
   const { stats } = state;
   const { players } = stats;
   const games = state.historyNewestFirst ? [...stats.games].reverse() : stats.games;
-  const hasDate = games.some((g) => g.date);
+  const hasDate = games.some((g) => g.date || g.dateText);
 
   const marginTag = (g) =>
     g.isTie
@@ -706,7 +706,7 @@ function renderHistory(el) {
       .map(
         (g) => `
       <li class="hist-card">
-        <div class="hist-top"><span><span class="g">Game ${g.number}</span>${g.date ? `<span class="d">${esc(g.date)}</span>` : ''}</span>${marginTag(g)}</div>
+        <div class="hist-top"><span><span class="g">Game ${g.number}</span>${fmtDate(g) ? `<span class="d">${esc(fmtDate(g))}</span>` : ''}</span>${marginTag(g)}</div>
         <div class="hist-scores">${g.results
           .map(
             (r) => `<div class="row ${r.place === 1 ? 'win' : ''}">${placeBadge(r.place, r.place === 1 && g.isTie)}${pname(r.player)}<span class="sc">${r.score}</span></div>`,
@@ -726,7 +726,7 @@ function renderHistory(el) {
         <tbody>${games
           .map(
             (g) => `<tr>
-          <td class="l"><strong>${g.number}</strong></td>${hasDate ? `<td class="l">${esc(g.date || '')}</td>` : ''}
+          <td class="l"><strong>${g.number}</strong></td>${hasDate ? `<td class="l">${esc(fmtDate(g))}</td>` : ''}
           ${players
             .map((p) => {
               const place = g.placeOf[p];
