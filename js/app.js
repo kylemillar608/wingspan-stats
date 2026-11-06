@@ -56,7 +56,7 @@ async function load({ background = false } = {}) {
   }
   try {
     const text = DEMO ? demoCsv() : await fetchCsvText();
-    const data = interpretCsv(text, { dateOrder: CONFIG.dateOrder });
+    const data = interpretCsv(text, { dateOrder: CONFIG.dateOrder, requireDate: CONFIG.requireDate, requireWinner: CONFIG.requireWinner });
     state.data = data;
     state.stats = computeStats(data);
     state.awards = computeAwards(state.stats);
@@ -204,10 +204,16 @@ function renderNotices() {
     el.innerHTML = '';
     return;
   }
+  const skipped = w.filter((x) => x.level === 'skipped');
+  const check = w.filter((x) => x.level !== 'skipped');
+  const parts = [skipped.length && `${plural(skipped.length, 'row')} not counted`, check.length && `${plural(check.length, 'thing')} to check`].filter(Boolean);
+  const list = (title, items) =>
+    items.length ? `<p class="notice-group">${title}</p><ul>${items.map((x) => `<li>${esc(x.message)}</li>`).join('')}</ul>` : '';
   el.innerHTML = `
-    <details class="notice" ${w.length <= 2 ? 'open' : ''}>
-      <summary>⚠ ${plural(w.length, 'issue')} in the sheet — affected rows are not counted</summary>
-      <ul>${w.map((x) => `<li>${esc(x.message)}</li>`).join('')}</ul>
+    <details class="notice" ${w.length <= 3 ? 'open' : ''}>
+      <summary>⚠ Sheet check: ${parts.join(' · ')}</summary>
+      ${list('Not counted (fix these rows in the sheet to include them):', skipped)}
+      ${list('Counted, but worth a look:', check)}
     </details>`;
 }
 

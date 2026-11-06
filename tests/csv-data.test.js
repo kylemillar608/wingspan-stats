@@ -23,7 +23,7 @@ test('parses the exact format the published sheet returns', () => {
 });
 
 test('blank rows are skipped silently and never count as games', () => {
-  const d = interpretCsv('A,B,C\n10,20,30\n,,\n\n40,50,60\n,,\n');
+  const d = interpretCsv('A,B,C\n100,90,80\n,,\n\n95,105,110\n,,\n');
   assert.equal(d.games.length, 2);
   assert.equal(d.blankRows, 3);
   assert.deepEqual(d.warnings, []);
@@ -31,16 +31,16 @@ test('blank rows are skipped silently and never count as games', () => {
 });
 
 test('missing scores are never treated as zero; the row is reported', () => {
-  const d = interpretCsv('A,B,C\n10,20,30\n40,,60\n');
+  const d = interpretCsv('A,B,C\n100,90,80\n95,,110\n');
   assert.equal(d.games.length, 1);
   assert.equal(d.warnings.length, 1);
   assert.match(d.warnings[0].message, /Row 3 .*missing a score for B/);
 });
 
 test('non-numeric and negative scores are rejected and reported', () => {
-  const d = interpretCsv('A,B,C\n10,abc,30\n-5,20,30\n 11 , 21 ,31\n');
+  const d = interpretCsv('A,B,C\n100,abc,80\n-5,90,80\n 101 , 91 ,81\n');
   assert.equal(d.games.length, 1);
-  assert.deepEqual(d.games[0].scores, { A: 11, B: 21, C: 31 });
+  assert.deepEqual(d.games[0].scores, { A: 101, B: 91, C: 81 });
   assert.equal(d.warnings.length, 2);
 });
 
@@ -77,7 +77,7 @@ test('a link to the site in the header row is not a player (real sheet, 2026-11-
 });
 
 test('a text label in the header row with nothing beneath it is not a player', () => {
-  const d = interpretCsv('Jen,Alex,Connor,,Our stats site\n1,2,3,,\n4,5,6,,\n');
+  const d = interpretCsv('Jen,Alex,Connor,,Our stats site\n101,92,83,,\n94,105,116,,\n');
   assert.deepEqual(d.players, ['Jen', 'Alex', 'Connor']);
   assert.equal(d.games.length, 2);
   assert.deepEqual(d.warnings, []);
@@ -90,7 +90,7 @@ test('with no games entered yet, every named column is still a player', () => {
 });
 
 test('values in an unnamed column are reported', () => {
-  const d = interpretCsv('A,B,C,\n1,2,3,4\n');
+  const d = interpretCsv('A,B,C,\n100,90,80,4\n');
   assert.equal(d.games.length, 1);
   assert.match(d.warnings[0].message, /Column D/);
 });

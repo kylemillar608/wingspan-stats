@@ -12,12 +12,12 @@ import { CONFIG } from '../js/config.js';
 
 try {
   const text = await fetchCsvText(process.argv[2] || CONFIG.csvUrl);
-  const data = interpretCsv(text, { dateOrder: CONFIG.dateOrder });
+  const data = interpretCsv(text, { dateOrder: CONFIG.dateOrder, requireDate: CONFIG.requireDate, requireWinner: CONFIG.requireWinner });
   const stats = computeStats(data);
 
   console.log(`Players: ${data.players.join(', ')}`);
   console.log(`Valid games: ${data.games.length}   blank rows skipped: ${data.blankRows}`);
-  for (const w of data.warnings) console.log(`  ⚠ ${w.message}`);
+  for (const w of data.warnings) console.log(`  ${w.level === 'skipped' ? '✖ not counted' : '⚠ check'}: ${w.message}`);
 
   console.log('\nGames (sheet row → scores → winner, margin)');
   for (const g of stats.games) {

@@ -13,6 +13,11 @@ export const CONFIG = {
   // it obvious (no day above 12 anywhere): 'MDY' = month first (US), 'DMY' = day first.
   dateOrder: 'MDY',
 
+  // The sheet is expected to have these columns on every row; a missing one is
+  // flagged (the game still counts).
+  requireDate: true,
+  requireWinner: true,
+
   requestTimeoutMs: 15000,
 
   // When the tab regains focus after this long, quietly re-fetch the sheet.

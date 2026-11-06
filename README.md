@@ -19,13 +19,14 @@ https://docs.google.com/spreadsheets/d/e/2PACX-1vT09powUsPn2xPaa5yYOdtKl5tJ0wLIN
 
 ### Layout the site expects
 
-| A   | B    | C      |
-| --- | ---- | ------ |
-| Jen | Alex | Connor |
-| 103 | 100  | 104    |
-| 102 | 100  | 101    |
+| A         | B   | C    | D      | E      |
+| --------- | --- | ---- | ------ | ------ |
+| Date      | Jen | Alex | Connor | Winner |
+| 8/22/2026 | 116 | 93   | 98     | Jen    |
+| 8/28/2026 | 101 | 100  | 117    | Connor |
 
-* **Row 1 holds the player names**, one per column. The names shown on the site come from here.
+* **Row 1 holds the headings:** `Date`, one column per player (the names shown on the site come
+  from here), and `Winner`. A link or label elsewhere in row 1 is ignored.
 * **Every other row is one finished game**, with one final score per player.
 * **Rows run in time order, oldest at the top and newest at the bottom.** Streaks, "last 5
   games", the Rising Star award and the charts all rely on this order. Add new games at the bottom.
@@ -39,6 +40,30 @@ https://docs.google.com/spreadsheets/d/e/2PACX-1vT09powUsPn2xPaa5yYOdtKl5tJ0wLIN
   the column (any day above 12 settles it); otherwise `dateOrder` in `js/config.js` decides.
   Blank dates are fine. An unreadable date shows a warning, but the game still counts. Row order
   still decides the game order, and a date earlier than the row above it is flagged.
+
+### Sheet checks
+
+Every row is validated each time the site loads. Problems appear in a yellow **Sheet check** box
+at the top of the page, in row order, in two groups:
+
+**Not counted** (the row can't be used safely; fix it in the sheet to include it):
+* a missing score, or a score that isn't a non-negative number (e.g. `1OO`, `-5`)
+* a row with a date or winner but no scores yet (an unfinished game)
+
+**Counted, but worth a look:**
+* *Scores:* not a whole number, outside 40–200 (likely a typo), or exactly the same as an
+  earlier row (entered twice?)
+* *Date:* missing, unreadable, in the future, before 2019 (Wingspan's release), earlier than the
+  row above, or a column mixing day-first and month-first
+* *Winner:* missing, not a player's name, names someone who didn't have the top score, says
+  "Tie" on a clear win, or names the wrong players for a tie. The scores always win a
+  disagreement.
+* *Columns:* no Date or Winner column, a duplicated Date/Winner column, values in a column with no
+  heading, or not exactly 3 players
+
+Thresholds live in `js/rules.js`, and the expected columns (`requireDate`, `requireWinner`) live in
+`js/config.js`. Only a sheet that can't be read at all (empty, no player names, or a duplicated
+player) stops the site loading, with an error explaining why.
 
 ### If the data stops loading
 
