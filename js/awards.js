@@ -146,6 +146,31 @@ export function computeAwards(stats, { honours = null } = {}) {
     ),
   );
 
+  {
+    const n = RULES.risingStarWindow;
+    const def = {
+      id: 'rising-star', category: 'glory', icon: '📈', name: 'The Rising Star',
+      definition: `Most improved lately: biggest rise in average score from the ${n} games before to the ${n} most recent. Both windows move with every game.`,
+      empty: 'Nobody is trending up right now.',
+    };
+    const res = playerAward(def, (s) => s.improvement?.delta ?? null, 'max', {
+      valueText: (v) => `${fmtSigned(v)} pts`,
+      detail: (s) => `${fmtAvg(s.improvement.prior)} → ${fmtAvg(s.improvement.recent)}, last ${s.improvement.k} vs the ${s.improvement.k} before`,
+    });
+    if (res.value != null && res.value <= 0) {
+      out.push(award(def, {}));
+    } else {
+      if (res.holders.length) {
+        const k = perPlayer[res.holders[0].player].improvement.k;
+        res.provisional = k < RULES.risingStarSolidWindow
+          ? `Early days: only ${plural(k, 'game')} in each comparison window.`
+          : null;
+      }
+      if (games.length < RULES.risingStarMinGames) res.empty = `Needs ${RULES.risingStarMinGames} games.`;
+      out.push(res);
+    }
+  }
+
   // 💍 Rings: one per finished season (calendar quarter) won. Needs the
   // honours board, so it's only included in the all-time view.
   if (honours) {

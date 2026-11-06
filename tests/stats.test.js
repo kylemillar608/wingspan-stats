@@ -52,16 +52,20 @@ test('streaks: longest runs (all occurrences) and current run', () => {
   assert.equal(streaks([]).current, 0);
 });
 
-test('improvement compares first k vs last k, k = min(10, floor(n/2))', () => {
+test('trend compares the last k games with the k before them, k = min(5, floor(n/2))', () => {
   assert.equal(improvement([1, 2, 3]), null);
   const i = improvement([103, 102, 101, 99, 150]);
-  assert.equal(i.k, 2);
-  assert.equal(i.delta, 22);
-  assert.equal(i.provisional, true);
+  assert.deepEqual([i.k, i.prior, i.recent, i.delta, i.provisional], [2, 101.5, 124.5, 23, true]);
   const big = improvement(Array.from({ length: 30 }, (_, n) => n));
-  assert.equal(big.k, 10);
-  assert.equal(big.delta, 20);
-  assert.equal(big.provisional, false);
+  assert.deepEqual([big.k, big.prior, big.recent, big.delta, big.provisional], [5, 22, 27, 5, false]);
+});
+
+test('trend windows slide: an improvement long ago doesn’t count as recent', () => {
+  // Ten games at 60, then ten at 110: improved a lot, but flat for the last ten.
+  const scores = [...Array(10).fill(60), ...Array(10).fill(110)];
+  assert.equal(improvement(scores).delta, 0);
+  // A player improving right now: flat, then a recent climb.
+  assert.equal(improvement([...Array(10).fill(100), 100, 100, 100, 100, 100, 104, 106, 108, 110, 112]).delta, 8);
 });
 
 test('real sheet: per-player statistics', () => {
@@ -118,7 +122,8 @@ test('real sheet: Hall of Fame', () => {
   assert.deepEqual([who('destroyer'), awards.destroyer.value], [['Jen'], 25]);
   assert.deepEqual(who('rock'), ['Connor']);
   assert.deepEqual(who('hot-hand'), ['Jen']);
-  assert.equal(awards['rising-star'], undefined, 'retired');
+  assert.deepEqual([who('rising-star'), awards['rising-star'].value], [['Jen'], 23]);
+  assert.ok(awards['rising-star'].provisional);
   assert.deepEqual(who('dynasty'), ['Jen', 'Alex', 'Connor']);
   assert.deepEqual(who('apex-predator'), ['Jen', 'Connor']);
   assert.deepEqual(who('club-120'), ['Jen', 'Alex', 'Connor']);

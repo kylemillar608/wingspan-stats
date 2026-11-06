@@ -9,8 +9,8 @@ export const RULES = {
   hotHandWindow: 5, // "last five games"
   formWindowLong: 10, // "last ten games"
   minGamesForConsistency: 5, // std-dev awards (The Rock / Chaos Bird)
-  risingStarMinGames: 4, // need at least 2 early + 2 recent games
-  risingStarMaxWindow: 10, // compare first N vs last N games, N ≤ 10
+  risingStarWindow: 5, // Rising Star / trend: last N games vs the N before that
+  risingStarMinGames: 4, // need at least 2 + 2 games to compare
   risingStarSolidWindow: 5, // below this the comparison is labeled provisional
 
   // Dates

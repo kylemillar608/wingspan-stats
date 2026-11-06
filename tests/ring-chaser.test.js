@@ -52,3 +52,18 @@ test('left out of single-season views, and never mentioned in the recap', () => 
   const r = computeRecap(data, stats, withRings);
   assert.ok(!r.events.some((e) => /Ring Chaser/.test(e.text)));
 });
+
+test('The Rising Star and The Ring Chaser both appear, side by side', () => {
+  const data = interpretCsv(LOG, STRICT);
+  const ids = computeAwards(computeStats(data), { honours: honours(data, TODAY) }).map((a) => a.id);
+  assert.equal(ids.indexOf('ring-chaser'), ids.indexOf('rising-star') + 1);
+});
+
+test('Rising Star on the real sheet: Jen, last 5 vs the 5 before', () => {
+  const data = interpretCsv(LOG, STRICT);
+  const a = computeAwards(computeStats(data)).find((x) => x.id === 'rising-star');
+  // Jen: games 11–15 (83, 113, 90, 115, 117) avg 103.6 → games 16–20 (105, 117, 112, 113, 102) avg 109.8.
+  assert.deepEqual(a.holders, [{ player: 'Jen', detail: '103.6 → 109.8, last 5 vs the 5 before' }]);
+  assert.equal(a.valueText, '+6.2 pts');
+  assert.equal(a.provisional, null);
+});

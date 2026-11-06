@@ -77,14 +77,15 @@ function recentForm(scores, window) {
   return { avg: mean(slice), n: slice.length, complete: scores.length >= window };
 }
 
-// Early vs recent: average of the first k games against the last k games,
-// where k = min(10, floor(games / 2)), so the two windows never overlap.
+// Recent trend: average of the last k games against the k games just before
+// them, where k = min(5, floor(games / 2)). Both windows slide forward with
+// every game, so this measures recent improvement, not change since day one.
 export function improvement(scores) {
   if (scores.length < RULES.risingStarMinGames) return null;
-  const k = Math.min(RULES.risingStarMaxWindow, Math.floor(scores.length / 2));
-  const early = mean(scores.slice(0, k));
+  const k = Math.min(RULES.risingStarWindow, Math.floor(scores.length / 2));
+  const prior = mean(scores.slice(-2 * k, -k));
   const recent = mean(scores.slice(-k));
-  return { k, early, recent, delta: recent - early, provisional: k < RULES.risingStarSolidWindow };
+  return { k, prior, recent, delta: recent - prior, provisional: k < RULES.risingStarSolidWindow };
 }
 
 export function computeStats({ players, games }) {

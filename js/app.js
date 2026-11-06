@@ -675,11 +675,11 @@ function renderPlayers(el) {
             ${
               imp
                 ? stat(
-                    'Early → recent',
+                    'Trend',
                     `<span class="${imp.delta > 0 ? 'delta-up' : imp.delta < 0 ? 'delta-down' : ''}">${fmtSigned(imp.delta)}</span>`,
-                    `${fmtAvg(imp.early)} → ${fmtAvg(imp.recent)} (first ${imp.k} vs last ${imp.k} games)${imp.provisional ? ', small sample' : ''}`,
+                    `${fmtAvg(imp.prior)} → ${fmtAvg(imp.recent)}: last ${imp.k} games vs the ${imp.k} before${imp.provisional ? ' (small sample)' : ''}`,
                   )
-                : stat('Early → recent', '—', `needs ${RULES.risingStarMinGames}+ games`)
+                : stat('Trend', '—', `needs ${RULES.risingStarMinGames}+ games`)
             }
           </dl>
         </div>

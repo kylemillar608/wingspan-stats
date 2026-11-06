@@ -3,7 +3,7 @@
 
 import { computeStats } from './stats.js';
 import { computeAwards } from './awards.js';
-import { fmtAvg, listNames, ordinal, plural } from './fmt.js';
+import { fmtAvg, fmtSigned, listNames, ordinal, plural } from './fmt.js';
 import { daysBetween, weekStart } from './activity.js';
 import { RULES } from './rules.js';
 
@@ -23,6 +23,7 @@ const STANDINGS = {
   rock: { stat: (s) => s.stdDev, noun: 'spread of scores', fmt: (v) => `±${fmtAvg(v)}` },
   'chaos-bird': { stat: (s) => s.stdDev, noun: 'spread of scores', fmt: (v) => `±${fmtAvg(v)}` },
   'hot-hand': { stat: (s) => s.last5.avg, noun: 'last-5 average', fmt: fmtAvg },
+  'rising-star': { stat: (s) => s.improvement?.delta ?? null, noun: 'recent trend', fmt: (v) => fmtSigned(v) },
   unlucky: { stat: (s) => s.lossAvg, noun: 'average in non-wins', fmt: fmtAvg },
 };
 
