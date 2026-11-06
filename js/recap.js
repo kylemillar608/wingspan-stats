@@ -3,7 +3,7 @@
 
 import { computeStats } from './stats.js';
 import { computeAwards } from './awards.js';
-import { fmtAvg, fmtSigned, listNames, ordinal, plural } from './fmt.js';
+import { fmtAvg, listNames, ordinal, plural } from './fmt.js';
 import { daysBetween, weekStart } from './activity.js';
 import { RULES } from './rules.js';
 
@@ -23,7 +23,6 @@ const STANDINGS = {
   rock: { stat: (s) => s.stdDev, noun: 'spread of scores', fmt: (v) => `±${fmtAvg(v)}` },
   'chaos-bird': { stat: (s) => s.stdDev, noun: 'spread of scores', fmt: (v) => `±${fmtAvg(v)}` },
   'hot-hand': { stat: (s) => s.last5.avg, noun: 'last-5 average', fmt: fmtAvg },
-  'rising-star': { stat: (s) => s.improvement?.delta ?? null, noun: 'improvement', fmt: (v) => fmtSigned(v) },
   unlucky: { stat: (s) => s.lossAvg, noun: 'average in non-wins', fmt: fmtAvg },
 };
 
@@ -73,6 +72,7 @@ export function computeRecap(data, after = computeStats(data), afterAwards = com
   const prev = Object.fromEntries(beforeAwards.map((x) => [x.id, x]));
   for (const aw of afterAwards) {
     const old = prev[aw.id];
+    if (!old) continue; // e.g. The Ring Chaser: titles come from the calendar, not from a game
     const now = aw.holders.map((h) => h.player);
     const was = old.holders.map((h) => h.player);
     if (!now.length) continue;

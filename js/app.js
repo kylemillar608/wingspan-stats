@@ -67,10 +67,10 @@ async function load({ background = false } = {}) {
     const data = interpretCsv(text, { dateOrder: CONFIG.dateOrder, requireDate: CONFIG.requireDate, requireWinner: CONFIG.requireWinner });
     state.data = data;
     state.stats = computeStats(data);
-    state.awards = computeAwards(state.stats);
-    state.recap = computeRecap(data, state.stats, state.awards);
     state.seasons = groupByPeriod(data.games, seasonOf);
     state.honours = honours(data, today());
+    state.awards = computeAwards(state.stats, { honours: state.honours });
+    state.recap = computeRecap(data, state.stats, state.awards);
     state.activity = activity(data.games, today());
     state.scopeCache = new Map();
     if (!state.seasons.some((x) => x.id === state.scope)) state.scope = 'all';

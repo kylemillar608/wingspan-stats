@@ -9,6 +9,7 @@ import { computeStats } from '../js/stats.js';
 import { computeAwards } from '../js/awards.js';
 import { fmtAvg, fmtDate, listNames } from '../js/fmt.js';
 import { CONFIG } from '../js/config.js';
+import { honours } from '../js/periods.js';
 
 try {
   const text = await fetchCsvText(process.argv[2] || CONFIG.csvUrl);
@@ -36,7 +37,7 @@ try {
   );
 
   console.log('Hall of Fame');
-  for (const a of computeAwards(stats)) {
+  for (const a of computeAwards(stats, { honours: honours(data, new Date()) })) {
     const who = a.holders.length
       ? a.holders.map((h) => `${h.player}${h.detail ? ` (${h.detail})` : ''}`).join('; ')
       : `— ${a.empty || 'no holder'}`;

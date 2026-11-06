@@ -29,7 +29,9 @@ function award(def, result) {
   return { ...def, holders: [], value: null, valueText: '', ...result };
 }
 
-export function computeAwards(stats) {
+// `honours` (from periods.js) enables The Ring Chaser; leave it out for a
+// single-season view, where season titles mean nothing.
+export function computeAwards(stats, { honours = null } = {}) {
   const { players, games, perPlayer } = stats;
   const P = players.map((p) => perPlayer[p]);
   const out = [];
@@ -144,27 +146,36 @@ export function computeAwards(stats) {
     ),
   );
 
-  {
+  // 💍 Rings: one per finished season (calendar quarter) won. Needs the
+  // honours board, so it's only included in the all-time view.
+  if (honours) {
     const def = {
-      id: 'rising-star', category: 'glory', icon: '📈', name: 'The Rising Star',
-      definition: `Biggest rise in average score: first ${RULES.risingStarMaxWindow} games vs last ${RULES.risingStarMaxWindow} (or first half vs second half until ${RULES.risingStarMaxWindow * 2} games are played).`,
-      empty: 'Nobody has improved yet.',
+      id: 'ring-chaser', category: 'glory', icon: '💍', name: 'The Ring Chaser',
+      definition: 'Most season championships: a ring for every finished season (calendar quarter) won. Ties go to whoever has more Player of the Month titles.',
     };
-    const res = playerAward(def, (s) => s.improvement?.delta ?? null, 'max', {
-      valueText: (v) => `${fmtSigned(v)} pts`,
-      detail: (s) => `${fmtAvg(s.improvement.early)} → ${fmtAvg(s.improvement.recent)}, first ${s.improvement.k} vs last ${s.improvement.k} games`,
-    });
-    if (res.value != null && res.value <= 0) {
-      out.push(award(def, {}));
+    const finished = (list) => list.filter((x) => !x.inProgress);
+    const seasons = finished(honours.seasons);
+    if (!seasons.length) {
+      const current = honours.seasons.find((x) => x.inProgress);
+      out.push(award({ ...def, empty: current ? `The first ring is handed out when ${current.label} ends.` : 'No seasons yet.' }, {}));
     } else {
-      if (res.holders.length) {
-        const k = perPlayer[res.holders[0].player].improvement.k;
-        res.provisional = k < RULES.risingStarSolidWindow
-          ? `Early days: only ${plural(k, 'game')} in each comparison window.`
-          : null;
-      }
-      if (games.length < RULES.risingStarMinGames) res.empty = `Needs ${RULES.risingStarMinGames} games.`;
-      out.push(res);
+      const won = (list, p) => finished(list).filter((x) => x.champions.some((c) => c.player === p));
+      const items = players.map((p) => {
+        const rings = won(honours.seasons, p);
+        const months = won(honours.months, p).length;
+        return { player: p, rings, months, value: rings.length ? rings.length * 1000 + months : null };
+      });
+      const r = best(items, 'max');
+      out.push(
+        award(def, {
+          value: Math.floor(r.value / 1000),
+          valueText: plural(Math.floor(r.value / 1000), 'ring'),
+          holders: r.items.map((i) => ({
+            player: i.player,
+            detail: `${i.rings.map((x) => x.label).join(', ')}${i.months ? ` · ${i.months}× Player of the Month` : ''}`,
+          })),
+        }),
+      );
     }
   }
 

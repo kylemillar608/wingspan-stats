@@ -118,8 +118,7 @@ test('real sheet: Hall of Fame', () => {
   assert.deepEqual([who('destroyer'), awards.destroyer.value], [['Jen'], 25]);
   assert.deepEqual(who('rock'), ['Connor']);
   assert.deepEqual(who('hot-hand'), ['Jen']);
-  assert.deepEqual([who('rising-star'), awards['rising-star'].value], [['Jen'], 22]);
-  assert.ok(awards['rising-star'].provisional);
+  assert.equal(awards['rising-star'], undefined, 'retired');
   assert.deepEqual(who('dynasty'), ['Jen', 'Alex', 'Connor']);
   assert.deepEqual(who('apex-predator'), ['Jen', 'Connor']);
   assert.deepEqual(who('club-120'), ['Jen', 'Alex', 'Connor']);

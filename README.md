@@ -29,7 +29,7 @@ https://docs.google.com/spreadsheets/d/e/2PACX-1vT09powUsPn2xPaa5yYOdtKl5tJ0wLIN
   from here), and `Winner`. A link or label elsewhere in row 1 is ignored.
 * **Every other row is one finished game**, with one final score per player.
 * **Rows run in time order, oldest at the top and newest at the bottom.** Streaks, "last 5
-  games", the Rising Star award and the charts all rely on this order. Add new games at the bottom.
+  games", the improvement comparison and the charts all rely on this order. Add new games at the bottom.
 * Blank rows are ignored.
 * A row with any missing or non-numeric score is treated as unfinished. It is **not** counted,
   and the site shows a yellow notice naming the row. Missing scores are never treated as zero.
@@ -116,7 +116,7 @@ npm test
 ```
 
 The tests cover CSV parsing, blank and partial rows, wins, medals, ties, medians, standard
-deviation, streaks, blowouts, the Rising Star comparison, every Hall of Fame award (against a
+deviation, streaks, blowouts, the improvement comparison, every Hall of Fame award (against a
 hand-checked snapshot of the real sheet) and the loader's error handling.
 
 ---
@@ -174,7 +174,7 @@ Every page reads from those modules, so each rule is defined once.
 * Standard deviation is the sample standard deviation (n − 1). It's shown once a player has 2+
   games. The Rock and the Chaos Bird require 5+ games.
 * "Last 5" and "Last 10" averages use every game available and are labelled when there are fewer.
-* **Improvement / Rising Star**: average of the first *k* games vs the last *k* games, where
+* **Improvement** (player profiles): average of the first *k* games vs the last *k* games, where
   *k* = min(10, ⌊games ÷ 2⌋), so the two windows never overlap. It needs 4+ games and is labelled
   "small sample" while *k* < 5.
 * The leaderboard ranks by wins, then average placement, then average score, then total points.
@@ -217,7 +217,7 @@ Thresholds are in `js/rules.js`. Preview any date with `?today=YYYY-MM-DD`.
 | 💥 The Destroyer | largest winning margin | 💔 The Heartbreaker | highest 2nd-place score |
 | 🧱 The Rock | lowest std dev (5+ games) | 🎢 The Chaos Bird | highest std dev (5+ games) |
 | 🔥 The Hot Hand | best last-5 average | 🦤 The Dodo | longest run without a win |
-| 📈 The Rising Star | biggest early→recent rise | | |
+| 💍 The Ring Chaser | most season titles (ties: most Player of the Month titles; all-time view only) | | |
 | 👑 The Dynasty | longest win streak | | |
 | 🦅 The Apex Predator | most 20+ point wins | | |
 | 💯 The 120 Club | most 120+ games | | |
