@@ -13,6 +13,11 @@ export const RULES = {
   risingStarMaxWindow: 10, // compare first N vs last N games, N ≤ 10
   risingStarSolidWindow: 5, // below this the comparison is labeled provisional
 
+  // Dates
+  longBreakDays: 10, // recap mentions "first game in N days" from this gap
+  busyWeekGames: 3, // recap mentions "3rd game this week" from this many (Mon–Sun)
+  birthdayWindowDays: 3, // "birthday games": finished within this many days of a birthday
+
   // Data checks: values outside these still count, but are flagged.
   plausibleScore: { min: 40, max: 200 }, // Wingspan scores outside this are likely typos
   earliestDate: new Date(2019, 0, 1), // Wingspan was released in 2019

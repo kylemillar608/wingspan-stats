@@ -188,6 +188,25 @@ to the biggest head-to-head wins-minus-losses against a single opponent.
 changes, streaks extended or ended, Hall of Fame records changing hands, and personal bests or lows
 (once a player has 3+ earlier games).
 
+**Seasons and dates** (need the `Date` column; undated games count in "All time" only)
+
+* **Seasons are calendar quarters** (Q1 = Jan–Mar …). The **Showing** picker on Overview, Players
+  and Hall of Fame recalculates everything for one season. It appears once there are two seasons.
+* **Season champion** and **🌟 Player of the month** = top of that period's leaderboard (same
+  ranking as all-time). They're listed in the **Honours** board at the bottom of Hall of Fame, and
+  on each player's profile once a period has finished.
+* **Activity** (top of History): days since the last game, games per week, the longest gap, and
+  games per week as a chart (per month once there's 18+ months of history).
+* **Cumulative wins** has a *Game # / Date* toggle. By date, lines step at each game, so quiet
+  stretches show as flat lines.
+* The **recap** adds "First game in N days" (10+ days) and "3rd game this week" (3+ in Mon–Sun),
+  and only when notable.
+* **🗓️ On this day** appears at the bottom of the recap on the anniversary of an earlier game.
+* **🎂 Birthday games** appear on a profile once a player has finished a game within 3 days of their
+  birthday.
+
+Thresholds are in `js/rules.js`. Preview any date with `?today=YYYY-MM-DD`.
+
 **Hall of Fame**
 
 | 🏆 Records & Glory | | 💀 Shame & Misfortune | |
@@ -241,6 +260,8 @@ js/stats.js           every statistic, ranking, streak and head-to-head record
 js/awards.js          Hall of Fame
 js/recap.js           latest-game recap (what changed)
 js/birthdays.js       🎂 easter egg: birthday dates (preview with ?today=YYYY-MM-DD)
+js/periods.js         seasons, months and their champions
+js/activity.js        gaps, weekly activity, on this day, birthday games
 js/charts.js          Chart.js rendering
 js/app.js             views, routing, loading/error states
 js/loader.js          fetches the sheet and explains failures

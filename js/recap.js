@@ -4,6 +4,8 @@
 import { computeStats } from './stats.js';
 import { computeAwards } from './awards.js';
 import { listNames, ordinal, plural } from './fmt.js';
+import { daysBetween, weekStart } from './activity.js';
+import { RULES } from './rules.js';
 
 // Awards whose value is a one-off record, so a new value is news even when
 // the holder hasn't changed (unlike averages, which move every game).
@@ -12,7 +14,7 @@ const RECORD_AWARDS = new Set([
   'grounded-bird', 'heartbreaker', 'dodo', 'nemesis',
 ]);
 
-const PRIORITY = { lead: 1, streak: 2, record: 3, personal: 4, award: 5 };
+const PRIORITY = { lead: 1, streak: 2, activity: 3, record: 4, personal: 5, award: 6 };
 
 export function computeRecap(data, after = computeStats(data), afterAwards = computeAwards(after)) {
   const { players, games } = data;
@@ -42,6 +44,16 @@ export function computeRecap(data, after = computeStats(data), afterAwards = com
     if (won && b.currentDrought >= 2) add('streak', '🌤️', `${p}’s first win in ${b.currentDrought + 1} games`);
     if (!won && b.currentWinStreak >= 2) add('streak', '🧊', `${p}’s ${b.currentWinStreak}-game winning streak is over`);
     if (!won && a.currentDrought >= 3) add('streak', '🦤', `${p} has now gone ${a.currentDrought} games without a win`);
+  }
+
+  // Pace: only notable gaps and busy weeks (1–2 games a week is normal).
+  if (game.date) {
+    const prev = [...games.slice(0, -1)].reverse().find((g) => g.date);
+    const gap = prev ? daysBetween(prev.date, game.date) : null;
+    if (gap != null && gap >= RULES.longBreakDays) add('activity', '⏳', `First game in ${gap} days`);
+    const week = weekStart(game.date).getTime();
+    const thisWeek = games.filter((g) => g.date && weekStart(g.date).getTime() === week).length;
+    if (thisWeek >= RULES.busyWeekGames) add('activity', '📆', `${ordinal(thisWeek)} game this week`);
   }
 
   // Hall of Fame changes.

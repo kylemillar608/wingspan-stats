@@ -3,6 +3,7 @@
 
 import { RULES } from './rules.js';
 import { fmtAvg, fmtDate, listNames, ordinal, plural } from './fmt.js';
+import { weekStart } from './activity.js';
 
 const active = new Map();
 
@@ -144,11 +145,52 @@ function mount(canvas, config) {
 
 const pointRadius = (n) => (n > 60 ? 0 : n > 30 ? 2 : 3.5);
 
-export function renderCumulativeWins(canvas, stats) {
+const DAY = 86400000;
+const shortDate = (ms) => new Date(ms).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+// Calendar ticks for a date axis: Mondays (weekly, or fortnightly when tight)
+// for spans up to ~2½ months, otherwise the 1st of each month.
+function dateTicks(min, max) {
+  const span = (max - min) / DAY;
+  const ticks = [];
+  if (span <= 75) {
+    const step = span > 35 && window.innerWidth < 640 ? 14 : 7;
+    let d = weekStart(new Date(min));
+    if (d.getTime() < min) d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7);
+    for (; d.getTime() <= max; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + step)) ticks.push({ value: d.getTime() });
+  } else {
+    const every = span > 730 ? 6 : span > 365 ? 3 : 1;
+    const first = new Date(min);
+    for (let d = new Date(first.getFullYear(), first.getMonth() + 1, 1); d.getTime() <= max; d = new Date(d.getFullYear(), d.getMonth() + every, 1)) {
+      ticks.push({ value: d.getTime() });
+    }
+  }
+  return ticks;
+}
+
+export function renderCumulativeWins(canvas, stats, { byDate = false } = {}) {
   const t = theme();
   const { players, games, series } = stats;
   const labels = ['Start', ...games.map((g) => String(g.number))];
   const options = baseOptions(t, { endLabelTexts: players });
+  // By date: x is the finish date, and lines step so quiet stretches stay flat.
+  const xs = byDate ? [games[0].date.getTime() - DAY, ...games.map((g) => g.date.getTime())] : null;
+  if (byDate) {
+    const span = xs[xs.length - 1] - xs[0];
+    options.scales.x = {
+      ...options.scales.x,
+      type: 'linear',
+      min: xs[0],
+      max: xs[xs.length - 1],
+      afterBuildTicks: (scale) => (scale.ticks = dateTicks(xs[0], xs[xs.length - 1])),
+      ticks: {
+        ...options.scales.x.ticks,
+        autoSkip: false,
+        callback: (v) => (span > 75 * DAY ? new Date(v).toLocaleDateString(undefined, { month: 'short', year: span > 365 * DAY ? '2-digit' : undefined }) : shortDate(v)),
+      },
+      title: { ...options.scales.x.title, text: 'Date' },
+    };
+  }
   options.scales.y.beginAtZero = true;
   options.scales.y.ticks.precision = 0;
   options.scales.y.title = { display: true, text: 'Wins', color: t.ink3, font: { family: t.font, size: 11, weight: '600' } };
@@ -176,7 +218,7 @@ export function renderCumulativeWins(canvas, stats) {
       labels,
       datasets: players.map((p, i) => ({
         label: p,
-        data: series.cumulativeWins[p],
+        data: byDate ? series.cumulativeWins[p].map((y, j) => ({ x: xs[j], y })) : series.cumulativeWins[p],
         borderColor: playerColor(i),
         backgroundColor: playerColor(i),
         borderWidth: 2.5,
@@ -184,7 +226,58 @@ export function renderCumulativeWins(canvas, stats) {
         pointHoverRadius: 6,
         pointBorderColor: t.surface,
         pointBorderWidth: 1.5,
+        stepped: byDate ? 'after' : false,
       })),
+    },
+    options,
+  });
+}
+
+// Games per week (or month): one series, so one colour and no legend.
+export function renderActivity(canvas, a) {
+  const t = theme();
+  const options = baseOptions(t);
+  const weekly = a.unit === 'week';
+  const monthLabel = (d) => d.toLocaleDateString(undefined, { month: 'short', year: a.buckets.length > 12 && !weekly ? '2-digit' : undefined });
+  options.interaction = { mode: 'index', intersect: false };
+  options.layout.padding.top = 2;
+  options.scales.x.title.display = false;
+  options.scales.x.ticks = {
+    ...options.scales.x.ticks,
+    autoSkip: !weekly,
+    callback: (_v, i) => {
+      const d = a.buckets[i].start;
+      const prev = a.buckets[i - 1]?.start;
+      return !weekly ? monthLabel(d) : !prev || prev.getMonth() !== d.getMonth() ? monthLabel(d) : '';
+    },
+  };
+  options.scales.y.beginAtZero = true;
+  options.scales.y.suggestedMax = 3;
+  options.scales.y.ticks = { ...options.scales.y.ticks, precision: 0, maxTicksLimit: 4 };
+  options.plugins.tooltip.callbacks = {
+    title: (items) => {
+      const d = a.buckets[items[0].dataIndex].start;
+      return weekly ? `Week of ${shortDate(d)}` : d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    },
+    label: (item) => ` ${plural(item.parsed.y, 'game')}`,
+  };
+  return mount(canvas, {
+    type: 'bar',
+    data: {
+      labels: a.buckets.map((b) => b.start.getTime()),
+      datasets: [
+        {
+          label: 'Games',
+          data: a.buckets.map((b) => b.count),
+          backgroundColor: css('--ink-3'),
+          hoverBackgroundColor: css('--ink-2'),
+          borderRadius: 4,
+          borderSkipped: 'start',
+          maxBarThickness: 22,
+          categoryPercentage: 0.85,
+          barPercentage: 0.9,
+        },
+      ],
     },
     options,
   });

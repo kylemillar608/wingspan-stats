@@ -6,9 +6,11 @@ import { computeStats } from './stats.js';
 import { computeAwards } from './awards.js';
 import { computeRecap } from './recap.js';
 import { demoCsv } from './demo.js';
-import { birthdaysOn, previewDate } from './birthdays.js';
-import { destroyCharts, renderCumulativeWins, renderRollingAverage, renderPlayerScores } from './charts.js';
-import { fmtAvg, fmtDate, fmtInt, fmtNum, fmtPct, fmtSigned, gameList, listNames, ordinal, plural } from './fmt.js';
+import { BIRTHDAYS, birthdaysOn, previewDate } from './birthdays.js';
+import { groupByPeriod, honours, playerHonours, seasonOf } from './periods.js';
+import { activity, birthdayGames, onThisDay } from './activity.js';
+import { destroyCharts, renderActivity, renderCumulativeWins, renderRollingAverage, renderPlayerScores } from './charts.js';
+import { fmtAvg, fmtDate, fmtInt, fmtShortDate, fmtNum, fmtPct, fmtSigned, gameList, listNames, ordinal, plural } from './fmt.js';
 
 // ─────────────────────────── State ───────────────────────────
 
@@ -26,6 +28,12 @@ const state = {
   refreshError: null,
   refreshing: false,
   historyNewestFirst: true,
+  scope: 'all', // 'all' or a season id such as '2026-Q4'
+  scopeCache: new Map(),
+  seasons: [],
+  honours: null,
+  activity: null,
+  winsByDate: false,
 };
 
 const $ = (sel) => document.querySelector(sel);
@@ -61,6 +69,11 @@ async function load({ background = false } = {}) {
     state.stats = computeStats(data);
     state.awards = computeAwards(state.stats);
     state.recap = computeRecap(data, state.stats, state.awards);
+    state.seasons = groupByPeriod(data.games, seasonOf);
+    state.honours = honours(data, today());
+    state.activity = activity(data.games, today());
+    state.scopeCache = new Map();
+    if (!state.seasons.some((x) => x.id === state.scope)) state.scope = 'all';
     state.loadedAt = new Date();
     state.status = 'ready';
     state.error = null;
@@ -244,27 +257,66 @@ function errorCard(err) {
     </div>`;
 }
 
+// ─────────────────────────── Season scope ───────────────────────────
+
+// Stats and awards for the selected season (or all time), computed once each.
+function scoped() {
+  if (state.scope === 'all') return { stats: state.stats, awards: state.awards, season: null };
+  if (!state.scopeCache.has(state.scope)) {
+    const season = state.seasons.find((x) => x.id === state.scope);
+    const stats = computeStats({ players: state.data.players, games: season.games });
+    state.scopeCache.set(state.scope, { stats, awards: computeAwards(stats), season });
+  }
+  return state.scopeCache.get(state.scope);
+}
+
+const scopeName = (season) => (season ? season.label : 'All time');
+
+// The season picker. Hidden until there are two seasons to choose between.
+function scopeBar() {
+  if (state.seasons.length < 2) return '';
+  const live = new Set(state.honours.seasons.filter((x) => x.inProgress).map((x) => x.id));
+  const opt = (value, label) => `<option value="${value}" ${state.scope === value ? 'selected' : ''}>${esc(label)}</option>`;
+  return `
+    <div class="scope-row">
+      <label class="scope"><span class="scope-label">Showing</span>
+        <select data-scope aria-label="Choose a season">
+          ${opt('all', `All time · ${plural(state.stats.games.length, 'game')}`)}
+          ${[...state.seasons]
+            .reverse()
+            .map((x) => opt(x.id, `${x.label} (${x.span})${live.has(x.id) ? ', in progress' : ''} · ${plural(x.games.length, 'game')}`))
+            .join('')}
+        </select>
+      </label>
+    </div>`;
+}
+
 // ─────────────────────────── Overview ───────────────────────────
 
 function renderOverview(el) {
-  const { stats, awards } = state;
+  const { stats, awards, season } = scoped();
   const { games, players } = stats;
   if (!games.length) {
-    el.innerHTML = emptyState();
+    el.innerHTML = scopeBar() + emptyState();
     return;
   }
+  // Date axis is offered only when every game in view has a date.
+  const canDate = games.length >= 2 && games.every((g) => g.date);
+  const byDate = canDate && state.winsByDate;
   const byId = Object.fromEntries(awards.map((a) => [a.id, a]));
   const leaders = byId.emperor.holders.map((h) => h.player);
   const high = byId['high-flyer'];
   const topStreak = Math.max(...players.map((p) => stats.perPlayer[p].currentWinStreak));
   const streakers = players.filter((p) => stats.perPlayer[p].currentWinStreak === topStreak);
 
+  const span = canDate ? `${fmtShortDate(games[0].date)} – ${fmtShortDate(games[games.length - 1].date)}` : `${players.length} players, every game`;
   el.innerHTML = `
+    ${scopeBar()}
     <div class="tiles">
       <div class="tile">
         <div class="tile-label">Games played</div>
         <div class="tile-value">${games.length}</div>
-        <div class="tile-sub">${players.length} players, every game</div>
+        <div class="tile-sub">${esc(span)}</div>
       </div>
       <div class="tile">
         <div class="tile-label">Most wins</div>
@@ -277,18 +329,18 @@ function renderOverview(el) {
         <div class="tile-sub">${high.holders.map((h) => `${esc(h.player)} · ${esc(h.detail)}`).join('<br>')}</div>
       </div>
       <div class="tile">
-        <div class="tile-label">Current streak</div>
+        <div class="tile-label">${season && !state.honours.seasons.find((x) => x.id === season.id)?.inProgress ? 'Streak at season end' : 'Current streak'}</div>
         <div class="tile-value names">${pnames(streakers)}</div>
         <div class="tile-sub">${plural(topStreak, 'win')} in a row${streakers.length > 1 ? ' each' : ''}</div>
       </div>
     </div>
 
-    ${recapCard()}
+    ${season ? '' : recapCard()}
 
     <section class="section">
       <div class="section-head">
         <h2>Leaderboard</h2>
-        <span class="sub">All-time · ${plural(games.length, 'game')}</span>
+        <span class="sub">${esc(scopeName(season))} · ${plural(games.length, 'game')}</span>
       </div>
       <div class="card">
         ${leaderboardCards(stats)}
@@ -300,8 +352,20 @@ function renderOverview(el) {
 
     <section class="section">
       <div class="card chart-card">
-        <h2 class="card-title">Cumulative wins</h2>
-        <p class="card-sub">Running total of wins after each game. Shared wins count for everyone tied.</p>
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">Cumulative wins</h2>
+            <p class="card-sub">Running total of wins after each game. Shared wins count for everyone tied.</p>
+          </div>
+          ${
+            canDate
+              ? `<div class="seg seg-small" role="group" aria-label="Horizontal axis">
+                  <button type="button" data-wins-axis="game" aria-pressed="${!byDate}">Game #</button>
+                  <button type="button" data-wins-axis="date" aria-pressed="${byDate}">Date</button>
+                </div>`
+              : ''
+          }
+        </div>
         <div class="chart-box tall"><canvas id="chart-wins" role="img" aria-label="Line chart of cumulative wins per player across all games"></canvas></div>
         ${dataTable(
           'Show as table',
@@ -323,7 +387,7 @@ function renderOverview(el) {
       </div>
     </section>`;
 
-  renderCumulativeWins($('#chart-wins'), stats);
+  renderCumulativeWins($('#chart-wins'), stats, { byDate });
   renderRollingAverage($('#chart-rolling'), stats);
 }
 
@@ -354,8 +418,20 @@ function recapCard() {
                ${rest.length ? `<details class="recap-more"><summary>${plural(rest.length, 'more change')}</summary><ul class="recap-events">${rest.map(item).join('')}</ul></details>` : ''}`
             : '<p class="card-sub">No records changed hands this time.</p>'
         }
+        ${onThisDayLine()}
       </div>
     </section>`;
+}
+
+// One quiet line, only on the anniversary of an earlier game (max two).
+function onThisDayLine() {
+  const now = today();
+  const past = onThisDay(state.stats.games, now).slice(0, 2);
+  if (!past.length) return '';
+  const ago = (g) => plural(now.getFullYear() - g.date.getFullYear(), 'year');
+  const text = (g) =>
+    `${ago(g)} ago today, ${listNames(g.winners)} ${g.isTie ? 'shared the win' : 'won'} Game ${g.number} with ${g.topScore}.`;
+  return `<p class="on-this-day"><span aria-hidden="true">🗓️</span> ${past.map((g) => esc(text(g))).join(' ')}</p>`;
 }
 
 function rivalryBar(a, b, r) {
@@ -519,7 +595,7 @@ function emptyState() {
 // ─────────────────────────── Players ───────────────────────────
 
 function renderPlayers(el) {
-  const { stats } = state;
+  const { stats, season } = scoped();
   const { players } = stats;
   const { arg } = route();
   const player = players.find((p) => p.toLowerCase() === (arg || '').toLowerCase()) || stats.leaderboard[0].player;
@@ -532,11 +608,20 @@ function renderPlayers(el) {
     .join('')}</nav>`;
 
   if (!stats.games.length) {
-    el.innerHTML = pills + emptyState();
+    el.innerHTML = scopeBar() + pills + emptyState();
     return;
   }
 
   const s = stats.perPlayer[player];
+  const won = playerHonours(state.honours, player);
+  const honourBits = [
+    ...won.seasons.map((x) => `🏅 ${esc(x)} champion`),
+    won.months.length ? `🌟 Player of the month${won.months.length > 1 ? ` ×${won.months.length}` : ''} (${esc(won.months.join(', '))})` : '',
+  ].filter(Boolean);
+  const birthday = Object.entries(BIRTHDAYS).find(([n]) => n.toLowerCase() === player.toLowerCase())?.[1];
+  const bdayGames = birthdayGames(stats.games, birthday, RULES.birthdayWindowDays);
+  const bdayAvg = bdayGames.length ? bdayGames.reduce((a, g) => a + g.scores[player], 0) / bdayGames.length : null;
+  const bdayWins = bdayGames.filter((g) => g.placeOf[player] === 1).length;
   const rank = stats.leaderboard.find((r) => r.player === player).rank;
   const imp = s.improvement;
   const fewer = (form) => (form.complete ? '' : `only ${plural(form.n, 'game')} so far`);
@@ -548,12 +633,14 @@ function renderPlayers(el) {
   const recent = stats.games.slice(-10).reverse();
 
   el.innerHTML = `
+    ${scopeBar()}
     ${pills}
     <div class="profile-head" style="${pc(player)}">
       <span class="avatar lg">${esc(player.charAt(0).toUpperCase())}</span>
       <div>
         <h2>${esc(player)}${isBirthday(player) ? ' <span title="Happy birthday!">🎂</span>' : ''}</h2>
-        <p>${ordinal(rank)} on the leaderboard · ${plural(s.wins, 'win')} in ${plural(s.games, 'game')}</p>
+        <p>${ordinal(rank)} ${season ? `in ${esc(season.label)}` : 'on the leaderboard'} · ${plural(s.wins, 'win')} in ${plural(s.games, 'game')}</p>
+        ${honourBits.length ? `<p class="honours-line">${honourBits.join(' · ')}</p>` : ''}
       </div>
     </div>
 
@@ -604,6 +691,15 @@ function renderPlayers(el) {
             ${stat('Current win streak', s.currentWinStreak, s.currentWinStreak ? '' : s.currentDrought ? `${plural(s.currentDrought, 'game')} since a win` : '')}
             ${stat('Longest win streak', s.longestWinStreak, runs(s.longestWinStreakRuns))}
             ${stat('Longest run without a win', s.longestDrought, runs(s.longestDroughtRuns))}
+            ${
+              bdayGames.length
+                ? stat(
+                    '🎂 Birthday games',
+                    bdayGames.length,
+                    `within ${RULES.birthdayWindowDays} days of their birthday: ${plural(bdayWins, 'win')}, avg ${fmtAvg(bdayAvg)} (${fmtAvg(s.avg)} overall)`,
+                  )
+                : ''
+            }
           </dl>
         </div>
       </div>
@@ -656,7 +752,7 @@ function recentRow(g, player) {
 // ─────────────────────────── Hall of Fame ───────────────────────────
 
 function renderHall(el) {
-  const { awards, stats } = state;
+  const { awards, stats, season } = scoped();
   const section = (cat, title, blurb) => `
     <section class="hall-section ${cat}">
       <div class="hall-head"><h2>${title}</h2><p>${blurb}</p></div>
@@ -664,10 +760,43 @@ function renderHall(el) {
     </section>`;
 
   el.innerHTML = `
-    <div class="section-head"><h2>Hall of Fame</h2><span class="sub">Recalculated from all ${plural(stats.games.length, 'game')} on every load. Tied records are shared.</span></div>
+    ${scopeBar()}
+    <div class="section-head"><h2>Hall of Fame</h2><span class="sub">${esc(season ? `${season.label} only` : 'All time')} · ${plural(stats.games.length, 'game')} · tied records are shared</span></div>
     ${section('glory', '🏆 Records &amp; Glory', 'Bragging rights, earned the hard way.')}
     ${section('shame', '💀 Shame &amp; Misfortune', 'Awards nobody asked for.')}
+    ${honoursBoard()}
     <div class="card">${rulesDetails()}</div>`;
+}
+
+const HONOURS_SHOWN = 6;
+
+// Season champions and players of the month, newest first (always all history).
+function honoursBoard() {
+  const h = state.honours;
+  if (!h || !h.seasons.length) return '';
+  const row = (p) => `
+    <li class="honour">
+      <span class="hn-period">${esc(p.label)}${p.span ? ` <span class="muted">${esc(p.span)}</span>` : ''}</span>
+      <span class="hn-who">${p.champions.length ? pnames(p.champions.map((c) => c.player)) : '—'}</span>
+      <span class="hn-detail">${p.champions.length ? `${plural(p.champions[0].wins, 'win')} of ${p.games}` : ''}${p.inProgress ? ' · so far' : ''}</span>
+    </li>`;
+  const list = (items) => `
+    <ol class="honours-list">${items.slice(0, HONOURS_SHOWN).map(row).join('')}</ol>
+    ${
+      items.length > HONOURS_SHOWN
+        ? `<details class="recap-more"><summary>${plural(items.length - HONOURS_SHOWN, 'earlier one')}</summary><ol class="honours-list">${items.slice(HONOURS_SHOWN).map(row).join('')}</ol></details>`
+        : ''
+    }`;
+  const undated = state.activity?.undated || 0;
+  return `
+    <section class="card honours">
+      <h2 class="card-title">🏅 Honours</h2>
+      <p class="card-sub">Whoever topped the leaderboard for each season (calendar quarter) and month.${undated ? ` ${plural(undated, 'game')} without a date ${undated === 1 ? 'isn’t' : 'aren’t'} included.` : ''}</p>
+      <div class="honours-cols">
+        <div><h3>Season champions</h3>${list(h.seasons)}</div>
+        <div><h3>🌟 Player of the month</h3>${list(h.months)}</div>
+      </div>
+    </section>`;
 }
 
 function awardCard(a) {
@@ -704,6 +833,7 @@ function renderHistory(el) {
       : `<span class="tag ${g.isBlowout ? 'blowout' : ''}" title="${g.isBlowout ? `Blowout: ${RULES.blowoutMargin}+ points` : 'Winning margin'}">+${g.margin}${g.isBlowout ? ' 💥' : ''}</span>`;
 
   el.innerHTML = `
+    ${activityCard()}
     <div class="section-head">
       <h2>Game history</h2>
       <div class="seg" role="group" aria-label="Sort order">
@@ -755,12 +885,35 @@ function renderHistory(el) {
       <p class="footnote">Dots: <span class="dot p1"></span> 1st <span class="dot p2"></span> 2nd <span class="dot p3"></span> 3rd · 💥 = win by ${RULES.blowoutMargin}+ · Game numbers follow the sheet’s row order.</p>
     </div>`
     }`;
+  if (state.activity) renderActivity($('#chart-activity'), state.activity);
+}
+
+// How often we play: three numbers and a small weekly bar chart.
+function activityCard() {
+  const a = state.activity;
+  if (!a || a.games < 2) return '';
+  const since = a.daysSinceLast === 0 ? 'Today' : a.daysSinceLast === 1 ? 'Yesterday' : `${a.daysSinceLast} days ago`;
+  const gap = a.longestGap;
+  const stat = (label, value, note) =>
+    `<div class="act-stat"><div class="tile-label">${label}</div><div class="act-value">${esc(value)}</div><div class="tile-sub">${esc(note)}</div></div>`;
+  return `
+    <section class="section">
+      <div class="card activity">
+        <div class="act-stats">
+          ${stat('Last game', since, fmtShortDate(a.last.date, { weekday: true }))}
+          ${stat('Pace', `${a.perWeek.toFixed(1)} / week`, `a game every ${fmtAvg(a.avgGap)} days`)}
+          ${stat('Longest gap', plural(gap.days, 'day'), `${fmtShortDate(gap.from.date)} → ${fmtShortDate(gap.to.date)}`)}
+        </div>
+        <div class="chart-box mini"><canvas id="chart-activity" role="img" aria-label="Bar chart of games played per ${a.unit}"></canvas></div>
+        <p class="chart-note">Games finished per ${a.unit}${a.undated ? `, not counting ${plural(a.undated, 'game')} without a date` : ''}.</p>
+      </div>
+    </section>`;
 }
 
 // ─────────────────────────── Events ───────────────────────────
 
 document.addEventListener('click', (e) => {
-  const btn = e.target.closest('[data-action], [data-sort]');
+  const btn = e.target.closest('[data-action], [data-sort], [data-wins-axis]');
   if (!btn) return;
   if (btn.dataset.action === 'retry') load();
   if (btn.dataset.action === 'refresh') load({ background: true });
@@ -770,8 +923,19 @@ document.addEventListener('click', (e) => {
     } catch {}
     $('#birthday').innerHTML = '';
   }
+  if (btn.dataset.winsAxis) {
+    state.winsByDate = btn.dataset.winsAxis === 'date';
+    render();
+  }
   if (btn.dataset.sort) {
     state.historyNewestFirst = btn.dataset.sort === 'newest';
+    render();
+  }
+});
+
+document.addEventListener('change', (e) => {
+  if (e.target.matches('[data-scope]')) {
+    state.scope = e.target.value;
     render();
   }
 });

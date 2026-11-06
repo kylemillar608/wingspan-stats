@@ -42,3 +42,14 @@ export const fmtDate = (g, { weekday = true } = {}) =>
   g.date
     ? g.date.toLocaleDateString(undefined, { weekday: weekday ? 'short' : undefined, month: 'short', day: 'numeric', year: 'numeric' })
     : g.dateText || '';
+
+// Compact date: "Oct 14", with the year only when it isn't this year.
+export const fmtShortDate = (d, { weekday = false, now = new Date() } = {}) =>
+  d
+    ? d.toLocaleDateString(undefined, {
+        weekday: weekday ? 'short' : undefined,
+        month: 'short',
+        day: 'numeric',
+        year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
+      })
+    : '';
