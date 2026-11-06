@@ -4,6 +4,8 @@
 //  • Placement uses competition ranking: 1 + number of players with a strictly
 //    higher score. Scores 120/120/95 → places 1, 1, 3. Scores 120/95/95 → 1, 2, 2.
 //  • Every player in 1st place earns a win and a gold medal (shared wins count).
+//    A tie for first can be settled by the sheet's Winner column (leftover
+//    food): the named player takes 1st, the others tied with them take 2nd.
 //  • Medals follow placement: 1st = gold, 2nd = silver, 3rd = bronze.
 //  • Winning margin = top score − second-highest score, so a tied win has margin 0.
 //  • Streaks run in sheet order and count shared wins as wins.
@@ -28,11 +30,15 @@ export function stdDev(xs) {
   return Math.sqrt(xs.reduce((a, x) => a + (x - m) ** 2, 0) / (xs.length - 1));
 }
 
-export function rankGame(scores, players) {
+// `tiebreakWinner` (from the sheet's Winner column) settles a tie for first:
+// that player takes 1st and the others tied with them drop to 2nd.
+export function rankGame(scores, players, tiebreakWinner = null) {
   const entries = players.map((player) => ({ player, score: scores[player] }));
   for (const e of entries) e.place = 1 + entries.filter((o) => o.score > e.score).length;
+  const brokeTie = tiebreakWinner != null && entries.filter((e) => e.place === 1).length > 1;
+  if (brokeTie) for (const e of entries) if (e.place === 1 && e.player !== tiebreakWinner) e.place = 2;
   const results = [...entries].sort(
-    (a, b) => b.score - a.score || players.indexOf(a.player) - players.indexOf(b.player),
+    (a, b) => b.score - a.score || a.place - b.place || players.indexOf(a.player) - players.indexOf(b.player),
   );
   const winners = results.filter((e) => e.place === 1).map((e) => e.player);
   const margin = results.length > 1 ? results[0].score - results[1].score : null;
@@ -41,6 +47,7 @@ export function rankGame(scores, players) {
     placeOf: Object.fromEntries(entries.map((e) => [e.player, e.place])),
     winners,
     isTie: winners.length > 1,
+    wonOnTiebreak: brokeTie,
     topScore: results[0].score,
     margin,
     isBlowout: margin != null && margin >= RULES.blowoutMargin,
@@ -81,7 +88,7 @@ export function improvement(scores) {
 }
 
 export function computeStats({ players, games }) {
-  const ranked = games.map((g) => ({ ...g, ...rankGame(g.scores, players) }));
+  const ranked = games.map((g) => ({ ...g, ...rankGame(g.scores, players, g.tiebreakWinner) }));
   const gameNumbers = ranked.map((g) => g.number);
   const toGames = (run) => ({ length: run.length, from: gameNumbers[run.start], to: gameNumbers[run.end] });
 
@@ -173,22 +180,23 @@ export function computeStats({ players, games }) {
   };
 }
 
-// Head-to-head: in every game, whoever of the two scored higher "beats" the
-// other, regardless of who won the game overall. Equal scores are ties.
+// Head-to-head: in every game, whoever of the two finished ahead "beats" the
+// other, regardless of who won the game overall. That's the higher score, or
+// the food tiebreaker when it decided first place. Otherwise equal is a tie.
 export function headToHead(players, games) {
   const h2h = {};
   for (const a of players) {
     h2h[a] = {};
     for (const b of players) {
       if (a === b) continue;
-      const diffs = games.map((g) => g.scores[a] - g.scores[b]);
-      const last = diffs.length ? diffs[diffs.length - 1] : null;
+      const ahead = games.map((g) => Math.sign(g.placeOf[b] - g.placeOf[a]));
+      const last = ahead.length ? ahead[ahead.length - 1] : null;
       h2h[a][b] = {
-        wins: diffs.filter((d) => d > 0).length,
-        losses: diffs.filter((d) => d < 0).length,
-        ties: diffs.filter((d) => d === 0).length,
-        games: diffs.length,
-        avgMargin: mean(diffs),
+        wins: ahead.filter((d) => d > 0).length,
+        losses: ahead.filter((d) => d < 0).length,
+        ties: ahead.filter((d) => d === 0).length,
+        games: ahead.length,
+        avgMargin: mean(games.map((g) => g.scores[a] - g.scores[b])),
         last: last == null ? null : last > 0 ? 'W' : last < 0 ? 'L' : 'T',
       };
     }

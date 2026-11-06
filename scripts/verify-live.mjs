@@ -23,7 +23,7 @@ try {
   for (const g of stats.games) {
     const s = data.players.map((p) => `${p} ${g.scores[p]}`).join(' · ');
     const when = fmtDate(g) ? ` ${fmtDate(g)}` : '';
-    console.log(`  #${g.number} (row ${g.sheetRow})${when}: ${s} → ${listNames(g.winners)}${g.isTie ? ' (tie)' : ''}, +${g.margin}`);
+    console.log(`  #${g.number} (row ${g.sheetRow})${when}: ${s} → ${listNames(g.winners)}${g.isTie ? ' (tie)' : g.wonOnTiebreak ? ' (food tiebreaker)' : ''}, +${g.margin}`);
   }
 
   console.log('\nLeaderboard');

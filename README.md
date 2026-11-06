@@ -32,8 +32,8 @@ https://docs.google.com/spreadsheets/d/e/2PACX-1vT09powUsPn2xPaa5yYOdtKl5tJ0wLIN
 * Blank rows are ignored.
 * A row with any missing or non-numeric score is treated as unfinished. It is **not** counted,
   and the site shows a yellow notice naming the row. Missing scores are never treated as zero.
-* Optional extra columns are fine if their header is `Date`, `Notes`, `Game`/`#`, or a computed
-  column such as `Winner`/`Margin`/`Total`. They're never mistaken for players.
+* Optional extra columns are fine if their header is `Date`, `Winner`, `Notes`, `Game`/`#`, or a
+  computed column such as `Margin`/`Total`. They're never mistaken for players.
 * A **`Date` column** is read as real dates: `11/3/2026`, `2026-11-03`, `Nov 3, 2026`,
   `Monday, November 3, 2026`, two-digit years, and so on. Day-first vs month-first is detected from
   the column (any day above 12 settles it); otherwise `dateOrder` in `js/config.js` decides.
@@ -127,7 +127,15 @@ Every page reads from those modules, so each rule is defined once.
 
 **Ties**
 
-* Everyone tied for the highest score shares 1st place. Each of them gets a win and a gold medal.
+* **Ties for first and the Winner column.** In Wingspan a tie goes to whoever has the most leftover
+  food. Record that in a `Winner` column: if it names one of the players tied for the top score,
+  that player wins outright and the others tied with them finish 2nd. That counts everywhere: wins,
+  medals, head-to-head, streaks and awards. A tiebreaker win has a margin of 0.
+* With the Winner cell blank (or `Tie`, or several names), everyone tied for the highest score
+  shares 1st place and gets a win and a gold medal.
+* The Winner column is only checked against clear wins. If it names someone who didn't have the
+  top score, the site shows a warning naming the row and goes by the scores. The column only
+  settles 1st place; ties further down stay shared (e.g. 2nd, 2nd).
 * Placements use competition ranking: 120 / 120 / 95 is 1st, 1st, 3rd (no silver), and
   120 / 95 / 95 is 1st, 2nd, 2nd.
 * Winning margin = top score − second-highest score, so a tied win has margin 0.

@@ -164,7 +164,9 @@ export function renderCumulativeWins(canvas, stats) {
       const i = items[0].dataIndex;
       if (i === 0) return '';
       const g = games[i - 1];
-      return g.isTie ? `Shared win: ${listNames(g.winners)}` : `Won by ${g.winners[0]} (+${g.margin})`;
+      return g.isTie
+        ? `Shared win: ${listNames(g.winners)}`
+        : `Won by ${g.winners[0]} (${g.wonOnTiebreak ? 'food tiebreaker' : `+${g.margin}`})`;
     },
   };
 

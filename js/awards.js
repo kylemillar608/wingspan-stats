@@ -92,9 +92,9 @@ export function computeAwards(stats) {
   }
 
   {
-    const def = { id: 'destroyer', category: 'glory', icon: '💥', name: 'The Destroyer', definition: 'Largest winning margin over second place (tied wins have no margin).', empty: 'Every game so far has been tied.' };
+    const def = { id: 'destroyer', category: 'glory', icon: '💥', name: 'The Destroyer', definition: 'Largest winning margin over second place (tied and tiebreaker wins have no margin).', empty: 'Every game so far has been tied.' };
     const r = best(
-      games.filter((g) => !g.isTie).map((g) => ({ player: g.winners[0], value: g.margin, game: g })),
+      games.filter((g) => g.margin > 0).map((g) => ({ player: g.winners[0], value: g.margin, game: g })),
       'max',
     );
     out.push(
@@ -214,7 +214,7 @@ export function computeAwards(stats) {
   {
     const def = {
       id: 'nemesis', category: 'glory', icon: '🎭', name: 'The Nemesis',
-      definition: 'Most lopsided rivalry: head-to-head wins minus losses against one opponent (higher score in the same game, whoever won overall).',
+      definition: 'Most lopsided rivalry: head-to-head wins minus losses against one opponent (finishing ahead in the same game, whoever won overall).',
       empty: 'No rivalry has a leader yet.',
     };
     const h2h = stats.headToHead;

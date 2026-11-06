@@ -374,7 +374,7 @@ function headToHeadCard(stats) {
   return `
     <div class="card">
       <h2 class="card-title">Head-to-head</h2>
-      <p class="card-sub">Who scored higher when they played each other, whoever won the game overall.</p>
+      <p class="card-sub">Who finished ahead of whom in each game (higher score, or the food tiebreaker), whoever won the game overall.</p>
       <div class="rivalries">${pairs
         .map(
           (p) => `
@@ -481,7 +481,7 @@ function rulesDetails() {
     <details class="rules">
       <summary>How ties and records work</summary>
       <ul>
-        <li><strong>Ties for first:</strong> every tied player gets a win and a gold medal.</li>
+        <li><strong>Ties for first</strong> are settled by leftover food, as in the Wingspan rules, when the sheet’s Winner column names one of the tied players. That player wins and the others tied with them finish 2nd. With no Winner entry, every tied player gets a win and a gold medal.</li>
         <li><strong>Placements</strong> use competition ranking: 120 / 120 / 95 is 1st, 1st, 3rd (no silver); 120 / 95 / 95 is 1st, 2nd, 2nd.</li>
         <li><strong>Winning margin</strong> is the winner’s score minus the second-highest score, so a tied win has a margin of 0.</li>
         <li><strong>Blowouts</strong> are wins by ${RULES.blowoutMargin}+ points over second place. Tied wins never count.</li>
@@ -627,10 +627,15 @@ function recentRow(g, player) {
   const place = g.placeOf[player];
   const score = g.scores[player];
   let ctx;
+  const second = listNames(g.results.filter((r) => r.place === 2).map((r) => r.player));
   if (place === 1) {
     ctx = g.isTie
       ? `Shared with ${listNames(g.winners.filter((w) => w !== player))}`
-      : `+${g.margin} over ${listNames(g.results.filter((r) => r.place === 2).map((r) => r.player))}`;
+      : g.wonOnTiebreak
+      ? `Won the food tiebreaker over ${second}`
+      : `+${g.margin} over ${second}`;
+  } else if (g.wonOnTiebreak && score === g.topScore) {
+    ctx = `Lost the food tiebreaker to ${g.winners[0]}`;
   } else {
     ctx = `${g.topScore - score} behind ${listNames(g.winners)}`;
   }
@@ -688,6 +693,8 @@ function renderHistory(el) {
   const marginTag = (g) =>
     g.isTie
       ? '<span class="tag tie">Tie</span>'
+      : g.wonOnTiebreak
+      ? '<span class="tag tie" title="Tied on points; won on leftover food">Food tiebreak 🍒</span>'
       : `<span class="tag ${g.isBlowout ? 'blowout' : ''}" title="${g.isBlowout ? `Blowout: ${RULES.blowoutMargin}+ points` : 'Winning margin'}">+${g.margin}${g.isBlowout ? ' 💥' : ''}</span>`;
 
   el.innerHTML = `

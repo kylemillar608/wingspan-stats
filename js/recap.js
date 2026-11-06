@@ -80,8 +80,11 @@ export function computeRecap(data, after = computeStats(data), afterAwards = com
   events.sort((x, y) => PRIORITY[x.kind] - PRIORITY[y.kind]);
 
   const second = game.results.find((r) => r.place > 1);
+  const tiedWith = game.results.filter((r) => r.score === game.topScore && r.player !== game.winners[0]).map((r) => r.player);
   const headline = game.isTie
     ? `${listNames(game.winners)} shared the win on ${game.topScore}`
+    : game.wonOnTiebreak
+    ? `${game.winners[0]} won on the food tiebreaker after tying ${listNames(tiedWith)} on ${game.topScore}`
     : `${game.winners[0]} won with ${game.topScore}, ${plural(game.margin, 'point')} ahead of ${listNames(
         game.results.filter((r) => r.score === second.score).map((r) => r.player),
       )}`;

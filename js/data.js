@@ -23,7 +23,8 @@ const META_COLUMNS = [
   { kind: 'date', re: /^(date|date played|played|played on|when)$/i },
   { kind: 'id', re: /^(game|game ?#|game ?no\.?|game number|#|no\.?|id)$/i },
   { kind: 'notes', re: /^(notes?|comments?)$/i },
-  { kind: 'ignored', re: /^(winner|winners|margin|total|totals|average|avg|expansions?|location)$/i },
+  { kind: 'winner', re: /^(winner|winners|won|won by)$/i },
+  { kind: 'ignored', re: /^(margin|total|totals|average|avg|expansions?|location)$/i },
 ];
 
 const SCORE_RE = /^\d+(\.\d+)?$/;
@@ -156,6 +157,7 @@ export function interpretRows(rows, { dateOrder = 'MDY' } = {}) {
       dateText: cell(meta.date) || null,
       notes: cell(meta.notes) || null,
       scores,
+      tiebreakWinner: tiebreakFrom(cell(meta.winner), scores, players, sheetRow, warnings),
     });
   }
 
@@ -169,6 +171,34 @@ export function interpretRows(rows, { dateOrder = 'MDY' } = {}) {
   }
 
   return { players, games, warnings, blankRows };
+}
+
+const SHARED_RE = /^(tie|tied|shared|draw|split)$/i;
+
+// The Winner column only matters when points are tied for first (Wingspan's
+// tiebreaker is leftover food). Returns the named player if they're one of the
+// tied top scorers; otherwise null, with a warning when the column disagrees
+// with the scores. The scores always win a disagreement.
+function tiebreakFrom(text, scores, players, sheetRow, warnings) {
+  if (!text || SHARED_RE.test(text)) return null;
+  const top = Math.max(...players.map((p) => scores[p]));
+  const leaders = players.filter((p) => scores[p] === top);
+  const named = players.find((p) => p.toLowerCase() === text.toLowerCase());
+  if (!named) {
+    const several = text.split(/\s*(?:&|,|\/|\band\b)\s*/i).filter(Boolean);
+    const all = several.map((n) => players.find((p) => p.toLowerCase() === n.toLowerCase()));
+    if (several.length > 1 && all.every(Boolean)) return null; // e.g. "Jen & Connor": a shared win
+    warnings.push({ row: sheetRow, message: `Row ${sheetRow}: the Winner column says "${text}", which isn't a player name. Using the scores.` });
+    return null;
+  }
+  if (!leaders.includes(named)) {
+    warnings.push({
+      row: sheetRow,
+      message: `Row ${sheetRow}: the Winner column says ${named}, but the top score was ${leaders.join(' & ')}'s ${top} (${named} had ${scores[named]}). Using the scores.`,
+    });
+    return null;
+  }
+  return leaders.length > 1 ? named : null;
 }
 
 // Fills in game.date (a local-midnight Date) from game.dateText. A blank or
