@@ -41,3 +41,18 @@ test('shared win headline and the very first game', () => {
   assert.ok(r.events.length > 0);
   assert.equal(computeRecap(interpretCsv('A,B,C\n')), null);
 });
+
+test('an average-based award that changes hands because of someone else says so', async () => {
+  const { LOG, STRICT } = await import('./fixtures.js');
+  const t = computeRecap(interpretCsv(LOG, STRICT)).events.map((e) => e.text);
+  // Game 20: Jen won (her average in non-wins is untouched at 104.17); Connor lost
+  // with 99, dropping his from 104.67 to 104.10, below Jen's.
+  assert.ok(t.includes('The Unlucky One passes from Connor to Jen (104.2 avg) as Connor’s average in non-wins fell to 104.1'), t.join('\n'));
+  assert.ok(!t.some((x) => /takes The Unlucky One/.test(x)));
+});
+
+test('an average-based award won by the new holder’s own game has no “as …” reason', () => {
+  const t = texts(REAL);
+  // Snapshot Game 5: Jen's 150 lifts her own career average above Connor's.
+  assert.ok(t.includes('The Sharpshooter passes from Connor to Jen (111.0 avg)'), t.join('\n'));
+});

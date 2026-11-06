@@ -3,7 +3,7 @@
 
 import { computeStats } from './stats.js';
 import { computeAwards } from './awards.js';
-import { listNames, ordinal, plural } from './fmt.js';
+import { fmtAvg, fmtSigned, listNames, ordinal, plural } from './fmt.js';
 import { daysBetween, weekStart } from './activity.js';
 import { RULES } from './rules.js';
 
@@ -13,6 +13,19 @@ const RECORD_AWARDS = new Set([
   'high-flyer', 'destroyer', 'dynasty', 'apex-predator', 'club-120', 'underdog',
   'grounded-bird', 'heartbreaker', 'dodo', 'nemesis',
 ]);
+
+// Awards decided by an average or spread. These can change hands without the
+// new holder doing anything (someone else's game moves *their* number), so
+// they "pass" to someone rather than being "taken", with the reason when the
+// new holder's own number didn't move.
+const STANDINGS = {
+  sharpshooter: { stat: (s) => s.avg, noun: 'career average', fmt: fmtAvg },
+  rock: { stat: (s) => s.stdDev, noun: 'spread of scores', fmt: (v) => `±${fmtAvg(v)}` },
+  'chaos-bird': { stat: (s) => s.stdDev, noun: 'spread of scores', fmt: (v) => `±${fmtAvg(v)}` },
+  'hot-hand': { stat: (s) => s.last5.avg, noun: 'last-5 average', fmt: fmtAvg },
+  'rising-star': { stat: (s) => s.improvement?.delta ?? null, noun: 'improvement', fmt: (v) => fmtSigned(v) },
+  unlucky: { stat: (s) => s.lossAvg, noun: 'average in non-wins', fmt: fmtAvg },
+};
 
 const PRIORITY = { lead: 1, streak: 2, activity: 3, record: 4, personal: 5, award: 6 };
 
@@ -67,7 +80,25 @@ export function computeRecap(data, after = computeStats(data), afterAwards = com
     const label = `${aw.name} (${aw.valueText})`;
     const joined = now.filter((p) => !was.includes(p));
     const kept = now.filter((p) => was.includes(p));
-    if (!was.length) {
+    const standing = STANDINGS[aw.id];
+    if (standing && was.length && joined.length) {
+      const value = (stats, p) => standing.stat(stats.perPlayer[p]);
+      const moved = (p) => {
+        const b = value(before, p);
+        const a = value(after, p);
+        return b == null || a == null || Math.abs(a - b) > 1e-9;
+      };
+      // Why it changed hands, when the newcomers' own numbers stood still:
+      // the previous holders' numbers moved instead.
+      const causes = joined.some(moved) ? [] : was.filter(moved);
+      const why = causes.length
+        ? ` as ${listNames(causes.map((p) => `${p}’s ${standing.noun} ${value(after, p) < value(before, p) ? 'fell' : 'rose'} to ${standing.fmt(value(after, p))}`))}`
+        : '';
+      const text = kept.length
+        ? `${aw.name} is now shared by ${listNames(now)} (${aw.valueText})`
+        : `${aw.name} passes from ${listNames(was)} to ${listNames(joined)} (${aw.valueText})`;
+      add(kind, aw.icon, text + why);
+    } else if (!was.length) {
       add(kind, aw.icon, `${listNames(now)} ${now.length > 1 ? 'share' : 'claims'} ${label}`);
     } else if (!joined.length && now.length === was.length) {
       if (kind === 'record' && aw.value !== old.value) add(kind, aw.icon, `${aw.name} record is now ${aw.valueText} (${listNames(now)})`);
